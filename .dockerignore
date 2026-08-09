@@ -1,0 +1,16 @@
+# The image build only needs deno.json, server.ts, proxy/ and the committed
+# dist/. Everything below is either large, host-specific, or a local-only
+# working file, so keep it out of the build context (this also shrinks the zip
+# uploaded to JustRunMy.App).
+.git
+node_modules
+.wrangler
+.netlify
+.idea
+*.log
+.DS_Store
+
+# Local-only working documents (also gitignored).
+TASK_PLAN.md
+WEBSITE_REVAMP_PLAN.md
+CHOREO_DEPLOY_PLAN.md
