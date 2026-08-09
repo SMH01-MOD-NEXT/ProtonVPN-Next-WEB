@@ -1,31 +1,31 @@
 {
   "nightly": {
     "debug": {
-      "versionCode": 605160335,
-      "versionName": "12.0.0-alpha2st2-72-g7114f2c-nightly",
+      "versionCode": 605160336,
+      "versionName": "12.0.0-alpha2st2-73-g188b806-nightly",
       "url": "https://r2.protonnext.qzz.io/VPN-Next-TEST/app-nightly-standard-debug.apk",
-      "changelog": "fix: stop VPN stats when Android system is dead\n\nTreat DeadSystem broadcast failures as process teardown, stop the traffic loop, and preserve all other runtime failures.\n\nSentry: ANDROID-23G",
+      "changelog": "fix: move Libbox version logging to background thread to avoid ANR\n\nAccessing the `Libbox` class on the main thread during `onCreate` could trigger an ABBA deadlock in Gomobile class initialization (racing between `SetupOptions.<clinit>` and `Libbox.<clinit>`). This blocked the main thread, prevented the service from calling `startForeground()` in time, and resulted in an ANR-kill of the `:vpn` process.\n\nThe version log is now moved into the background initialization coroutine to ensure class loading happens safely off the main thread.",
       "force": false
     },
     "release": {
-      "versionCode": 605160335,
-      "versionName": "12.0.0-alpha2st2-72-g7114f2c-nightly",
+      "versionCode": 605160336,
+      "versionName": "12.0.0-alpha2st2-73-g188b806-nightly",
       "url": "https://r2.protonnext.qzz.io/VPN-Next-TEST/app-nightly-standard-release.apk",
-      "changelog": "fix: stop VPN stats when Android system is dead\n\nTreat DeadSystem broadcast failures as process teardown, stop the traffic loop, and preserve all other runtime failures.\n\nSentry: ANDROID-23G",
+      "changelog": "fix: move Libbox version logging to background thread to avoid ANR\n\nAccessing the `Libbox` class on the main thread during `onCreate` could trigger an ABBA deadlock in Gomobile class initialization (racing between `SetupOptions.<clinit>` and `Libbox.<clinit>`). This blocked the main thread, prevented the service from calling `startForeground()` in time, and resulted in an ANR-kill of the `:vpn` process.\n\nThe version log is now moved into the background initialization coroutine to ensure class loading happens safely off the main thread.",
       "force": false
     },
     "privacyDebug": {
-      "versionCode": 605160335,
-      "versionName": "12.0.0-alpha2st2-72-g7114f2c-nightly",
+      "versionCode": 605160336,
+      "versionName": "12.0.0-alpha2st2-73-g188b806-nightly",
       "url": "https://r2.protonnext.qzz.io/VPN-Next-TEST/app-nightly-privacy-debug.apk",
-      "changelog": "fix: stop VPN stats when Android system is dead\n\nTreat DeadSystem broadcast failures as process teardown, stop the traffic loop, and preserve all other runtime failures.\n\nSentry: ANDROID-23G",
+      "changelog": "fix: move Libbox version logging to background thread to avoid ANR\n\nAccessing the `Libbox` class on the main thread during `onCreate` could trigger an ABBA deadlock in Gomobile class initialization (racing between `SetupOptions.<clinit>` and `Libbox.<clinit>`). This blocked the main thread, prevented the service from calling `startForeground()` in time, and resulted in an ANR-kill of the `:vpn` process.\n\nThe version log is now moved into the background initialization coroutine to ensure class loading happens safely off the main thread.",
       "force": false
     },
     "privacyRelease": {
-      "versionCode": 605160335,
-      "versionName": "12.0.0-alpha2st2-72-g7114f2c-nightly",
+      "versionCode": 605160336,
+      "versionName": "12.0.0-alpha2st2-73-g188b806-nightly",
       "url": "https://r2.protonnext.qzz.io/VPN-Next-TEST/app-nightly-privacy-release.apk",
-      "changelog": "fix: stop VPN stats when Android system is dead\n\nTreat DeadSystem broadcast failures as process teardown, stop the traffic loop, and preserve all other runtime failures.\n\nSentry: ANDROID-23G",
+      "changelog": "fix: move Libbox version logging to background thread to avoid ANR\n\nAccessing the `Libbox` class on the main thread during `onCreate` could trigger an ABBA deadlock in Gomobile class initialization (racing between `SetupOptions.<clinit>` and `Libbox.<clinit>`). This blocked the main thread, prevented the service from calling `startForeground()` in time, and resulted in an ANR-kill of the `:vpn` process.\n\nThe version log is now moved into the background initialization coroutine to ensure class loading happens safely off the main thread.",
       "force": false
     }
   },
