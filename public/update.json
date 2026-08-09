@@ -1,31 +1,31 @@
 {
   "nightly": {
     "debug": {
-      "versionCode": 605160330,
-      "versionName": "12.0.0-alpha2st2-67-gd6e3e5e-nightly",
+      "versionCode": 605160335,
+      "versionName": "12.0.0-alpha2st2-72-g7114f2c-nightly",
       "url": "https://r2.protonnext.qzz.io/VPN-Next-TEST/app-nightly-standard-debug.apk",
-      "changelog": "fix: prevent background ANR during Libbox initialization",
+      "changelog": "fix: stop VPN stats when Android system is dead\n\nTreat DeadSystem broadcast failures as process teardown, stop the traffic loop, and preserve all other runtime failures.\n\nSentry: ANDROID-23G",
       "force": false
     },
     "release": {
-      "versionCode": 605160330,
-      "versionName": "12.0.0-alpha2st2-67-gd6e3e5e-nightly",
+      "versionCode": 605160335,
+      "versionName": "12.0.0-alpha2st2-72-g7114f2c-nightly",
       "url": "https://r2.protonnext.qzz.io/VPN-Next-TEST/app-nightly-standard-release.apk",
-      "changelog": "fix: prevent background ANR during Libbox initialization",
+      "changelog": "fix: stop VPN stats when Android system is dead\n\nTreat DeadSystem broadcast failures as process teardown, stop the traffic loop, and preserve all other runtime failures.\n\nSentry: ANDROID-23G",
       "force": false
     },
     "privacyDebug": {
-      "versionCode": 605160330,
-      "versionName": "12.0.0-alpha2st2-67-gd6e3e5e-nightly",
+      "versionCode": 605160335,
+      "versionName": "12.0.0-alpha2st2-72-g7114f2c-nightly",
       "url": "https://r2.protonnext.qzz.io/VPN-Next-TEST/app-nightly-privacy-debug.apk",
-      "changelog": "fix: prevent background ANR during Libbox initialization",
+      "changelog": "fix: stop VPN stats when Android system is dead\n\nTreat DeadSystem broadcast failures as process teardown, stop the traffic loop, and preserve all other runtime failures.\n\nSentry: ANDROID-23G",
       "force": false
     },
     "privacyRelease": {
-      "versionCode": 605160330,
-      "versionName": "12.0.0-alpha2st2-67-gd6e3e5e-nightly",
+      "versionCode": 605160335,
+      "versionName": "12.0.0-alpha2st2-72-g7114f2c-nightly",
       "url": "https://r2.protonnext.qzz.io/VPN-Next-TEST/app-nightly-privacy-release.apk",
-      "changelog": "fix: prevent background ANR during Libbox initialization",
+      "changelog": "fix: stop VPN stats when Android system is dead\n\nTreat DeadSystem broadcast failures as process teardown, stop the traffic loop, and preserve all other runtime failures.\n\nSentry: ANDROID-23G",
       "force": false
     }
   },
