@@ -1,11 +1,11 @@
 {
 	"version": 2,
-	"updatedAt": "2026-08-07T15:20:00Z",
+	"updatedAt": "2026-08-17T22:46:00Z",
 	"events": [
 		{
-			"id": "choreo",
-			"name": "Choreo",
-			"url": "https://a1a33634-3d1f-4eff-9e6f-e79a9b7e0015.e1-us-east-azure.choreoapps.dev/api/",
+			"id": "vercel",
+			"name": "Vercel",
+			"url": "https://proton-vpn-next-web.vercel.app/api/",
 			"enabled": true,
 			"expiresAt": ""
 		}
