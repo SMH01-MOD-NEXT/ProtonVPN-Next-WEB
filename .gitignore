@@ -4,8 +4,9 @@ node_modules/
 .wrangler/
 .netlify/
 
-# dist/ is intentionally committed: wrangler serves it as the static asset
-# directory, so the deployed branch must carry the built site.
+# Every deployment builds the site itself now, so the build output is no
+# longer committed.
+dist/
 
 # JetBrains IDE settings
 .idea/

@@ -9,6 +9,9 @@
 
 import { baseHeaders } from "./spoof.js"
 
+/** True on the Vercel deployment, the only host with relay fallbacks. */
+const ON_VERCEL = typeof location !== "undefined" && location.hostname.endsWith(".vercel.app")
+
 /**
  * The query-parameter URL form, for the one deployment that needs it.
  *
@@ -16,10 +19,13 @@ import { baseHeaders } from "./spoof.js"
  * like `/api/vpn/v2` fall through to the static 404 without invoking the
  * function. Passing the Proton path in `__path` keeps the request on the one
  * route Vercel serves, and the proxy strips the parameter before forwarding.
+ * `via` asks the function to relay the call through a sibling deployment
+ * instead of calling Proton itself.
  */
-function queryUrl(path) {
+function queryUrl(path, via = null) {
 	const url = new URL(path, "https://proxy.invalid")
 	url.searchParams.set("__path", url.pathname)
+	if (via) url.searchParams.set("__via", via)
 	return `/api?${url.searchParams.toString()}`
 }
 
@@ -29,15 +35,34 @@ function queryUrl(path) {
 // so the normal path involves no extra hop. On Vercel that URL returns the
 // platform's own 404, which carries no Proton Code field, so the call falls
 // through to the query-parameter form, which the Vercel function does serve.
-// The absolute Deno URL stays as a last resort for the case where the site is
-// served from somewhere without a proxy of its own, such as a local
-// `vite preview` or a static copy; it is subject to CORS and may be
+//
+// The Vercel deployment additionally relays through its siblings when its own
+// route to Proton fails: Cloudflare first, then Deno, both called by the
+// Vercel function server-side. The browser never talks to another origin — in
+// a heavily censored network the Vercel domain may be the only one a visitor
+// can reach — and the relay swaps the egress IP Proton sees when it starts
+// distrusting Vercel's.
+//
+// Elsewhere the absolute Deno URL stays as a last resort for the case where
+// the site is served from somewhere without a proxy of its own, such as a
+// local `vite preview` or a static copy; it is subject to CORS and may be
 // unreachable, which the caller already handles as a proxy failure.
-export const API_ENDPOINTS = [
-	{ id: "same-origin", urlFor: (path) => `/api${path}` },
-	{ id: "same-origin-query", urlFor: queryUrl },
-	{ id: "deno", urlFor: (path) => "https:" + "//protonvpn-next-web--main.smh01-mirrors.deno.net/api" + path },
+const DIRECT_ENDPOINTS = [
+	{ id: "same-origin", sameOrigin: true, urlFor: (path) => `/api${path}` },
+	{ id: "same-origin-query", sameOrigin: true, urlFor: (path) => queryUrl(path) },
 ]
+
+const VERCEL_RELAY_ENDPOINTS = [
+	{ id: "via-cf", sameOrigin: true, urlFor: (path) => queryUrl(path, "cf") },
+	{ id: "via-deno", sameOrigin: true, urlFor: (path) => queryUrl(path, "deno") },
+]
+
+export const API_ENDPOINTS = ON_VERCEL
+	? [...DIRECT_ENDPOINTS, ...VERCEL_RELAY_ENDPOINTS]
+	: [
+			...DIRECT_ENDPOINTS,
+			{ id: "deno", sameOrigin: false, urlFor: (path) => "https:" + "//protonvpn-next-web--main.smh01-mirrors.deno.net/api" + path },
+		]
 
 /**
  * The endpoint that answered most recently, tried first on the next call.
@@ -82,8 +107,11 @@ export class ProxyUnreachableError extends Error {
  * Performs one API call, trying each proxy in order.
  *
  * Only transport failures and responses that did not come from Proton fall
- * through to the next proxy. A valid API response, including an error
- * payload, is returned as-is so the caller can react to the Proton error code.
+ * through to the next proxy, with one exception: on the Vercel deployment a
+ * 401/403 is retried through the relayed siblings first, because there it
+ * usually means Proton distrusts the function's egress IP rather than the
+ * session. Any other valid API response, including an error payload, is
+ * returned as-is so the caller can react to the Proton error code.
  */
 export async function apiRequest(path, { method = "GET", profile, session = null, body = null, extraHeaders = {}, signal } = {}) {
 	const headers = { ...baseHeaders(profile), ...extraHeaders }
@@ -96,6 +124,7 @@ export async function apiRequest(path, { method = "GET", profile, session = null
 	}
 
 	const failures = []
+	let firstAuthError = null
 	const ordered = preferredEndpointId
 		? [...API_ENDPOINTS.filter((endpoint) => endpoint.id === preferredEndpointId), ...API_ENDPOINTS.filter((endpoint) => endpoint.id !== preferredEndpointId)]
 		: API_ENDPOINTS
@@ -111,7 +140,7 @@ export async function apiRequest(path, { method = "GET", profile, session = null
 				// The proxy counts refreshes against a cookie it signs itself, so
 				// the cookie has to ride along; nothing Proton sets is ever kept,
 				// because the proxy strips upstream `Set-Cookie` headers.
-				credentials: endpoint.id.startsWith("same-origin") ? "same-origin" : "include",
+				credentials: endpoint.sameOrigin ? "same-origin" : "include",
 				mode: "cors",
 			})
 		} catch (error) {
@@ -149,12 +178,23 @@ export async function apiRequest(path, { method = "GET", profile, session = null
 			continue
 		}
 
+		if (ON_VERCEL && (response.status === 401 || response.status === 403)) {
+			// The relays get their chance; when every route agrees on the 401 the
+			// session really is the problem, and the direct route's answer is the
+			// one the caller sees.
+			if (endpoint.id === preferredEndpointId) preferredEndpointId = null
+			firstAuthError ??= { payload, status: response.status, endpoint: endpoint.id }
+			failures.push({ endpoint: endpoint.id, reason: `HTTP ${response.status}: ${payload.Error || "API error"}` })
+			continue
+		}
+
 		// A Proton error payload still proves the route works, so it pins the
 		// preference exactly like a Code 1000 would.
 		preferredEndpointId = endpoint.id
 		return { payload, status: response.status, endpoint: endpoint.id }
 	}
 
+	if (firstAuthError) return firstAuthError
 	throw new ProxyUnreachableError(failures)
 }
 

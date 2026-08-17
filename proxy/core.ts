@@ -14,7 +14,7 @@
  * a deployment does not run, and without a marker the only symptom is a CORS
  * error that looks identical to a code bug.
  */
-const PROXY_BUILD = "2026-08-17-query-path"
+const PROXY_BUILD = "2026-08-17-relay-address"
 
 import { openQuotaGate } from "./quota.js"
 
@@ -30,6 +30,8 @@ export interface QuotaStore {
 export interface ProxyContext {
 	store?: QuotaStore | null
 	secret?: string
+	/** Shared secret verifying the caller address a relaying sibling claims. */
+	relaySecret?: string
 	/** Caller address for runtimes that do not put it in a header. */
 	address?: string
 }
@@ -192,7 +194,12 @@ export async function handleProxyRequest(
 	// be accepted, without having to trigger a real CORS failure to find out.
 	if (pathname === "/__proxy/health") {
 		return new Response(
-			JSON.stringify({ build: PROXY_BUILD, origin, originAllowed: isAllowedOrigin(origin) }),
+			JSON.stringify({
+				build: PROXY_BUILD,
+				origin,
+				originAllowed: isAllowedOrigin(origin),
+				relayConfigured: Boolean(context?.relaySecret),
+			}),
 			{ status: 200, headers: { ...cors, "content-type": "application/json" } },
 		)
 	}
@@ -201,6 +208,7 @@ export async function handleProxyRequest(
 	const gate = await openQuotaGate(request, pathname, {
 		store: context?.store ?? null,
 		secret: context?.secret || FALLBACK_SECRET,
+		relaySecret: context?.relaySecret ?? "",
 		address: context?.address ?? "",
 	})
 
