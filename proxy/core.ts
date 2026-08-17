@@ -9,12 +9,12 @@
  */
 
 /**
- * Bumped by hand whenever the CORS behaviour changes, and reported by
- * `/__proxy/health`. Deno Deploy silently keeps serving an older build when a
- * deployment does not run, and without a marker the only symptom is a CORS
+ * Bumped by hand whenever the routing or CORS behaviour changes, and reported
+ * by `/__proxy/health`. Deno Deploy silently keeps serving an older build when
+ * a deployment does not run, and without a marker the only symptom is a CORS
  * error that looks identical to a code bug.
  */
-const PROXY_BUILD = "2026-08-07-choreo-origin"
+const PROXY_BUILD = "2026-08-17-query-path"
 
 import { openQuotaGate } from "./quota.js"
 
@@ -174,7 +174,19 @@ export async function handleProxyRequest(
 	}
 
 	const incoming = new URL(request.url)
-	const pathname = pathnameOverride ?? incoming.pathname
+	// The Vercel deployment cannot route beyond the literal `/api` path, so its
+	// client sends the real Proton path in this query parameter instead.
+	// Accepting it here as well keeps every copy of the proxy interchangeable: a
+	// caller holding the other URL form gets an answer instead of Proton's
+	// "path not found" for the proxy root. The parameter is private routing
+	// metadata and is never forwarded upstream.
+	const queryPath = incoming.searchParams.get("__path")
+	const pathname = queryPath
+		? queryPath.startsWith("/")
+			? queryPath
+			: `/${queryPath}`
+		: (pathnameOverride ?? incoming.pathname)
+	if (queryPath) incoming.searchParams.delete("__path")
 
 	// Tells which build is actually live and whether this caller's origin would
 	// be accepted, without having to trigger a real CORS failure to find out.
