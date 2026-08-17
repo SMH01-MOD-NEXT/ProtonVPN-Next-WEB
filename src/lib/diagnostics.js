@@ -28,17 +28,36 @@ function safeUrl(input) {
 	}
 }
 
+function sanitisePayload(payload) {
+	if (!payload || typeof payload !== "object") return payload
+	const copy = Array.isArray(payload) ? [...payload] : { ...payload }
+	for (const key of ["AccessToken", "RefreshToken", "Token", "Password", "PrivateKey"]) {
+		if (key in copy) copy[key] = "<redacted>"
+	}
+	return copy
+}
+
 function responsePreview(text, contentType) {
 	if (!text) return "<empty body>"
-	const clipped = text.slice(0, MAX_BODY_LENGTH)
 	if (contentType.includes("json")) {
 		try {
-			return JSON.stringify(JSON.parse(clipped), null, 2)
+			return JSON.stringify(sanitisePayload(JSON.parse(text)), null, 2).slice(0, MAX_BODY_LENGTH)
 		} catch {
 			// Fall through to the raw preview when an upstream sent broken JSON.
 		}
 	}
-	return clipped
+	return text.slice(0, MAX_BODY_LENGTH)
+}
+
+function shouldRecord(response, text, contentType) {
+	if (!response.ok || contentType.includes("text/html")) return true
+	if (!contentType.includes("json") || !text) return false
+	try {
+		const payload = JSON.parse(text)
+		return payload?.Code !== undefined && payload.Code !== 1000
+	} catch {
+		return true
+	}
 }
 
 function formatEntries() {
@@ -93,15 +112,15 @@ export function installDiagnostics() {
 		const url = safeUrl(input)
 		try {
 			const response = await originalFetch(input, init)
-			if (!response.ok || response.headers.get("content-type")?.includes("text/html")) {
-				const contentType = response.headers.get("content-type") || "unknown content type"
-				let body = "<body unavailable>"
-				try {
-					body = responsePreview(await response.clone().text(), contentType)
-				} catch {
-					// Diagnostics must never interfere with the original response.
-				}
-				record({ method, url, status: response.status, contentType, body })
+			const contentType = response.headers.get("content-type") || "unknown content type"
+			let text = ""
+			try {
+				text = await response.clone().text()
+			} catch {
+				// Diagnostics must never interfere with the original response.
+			}
+			if (shouldRecord(response, text, contentType)) {
+				record({ method, url, status: response.status, contentType, body: responsePreview(text, contentType) })
 			}
 			return response
 		} catch (error) {
