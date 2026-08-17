@@ -16,11 +16,11 @@ const ON_VERCEL = typeof location !== "undefined" && location.hostname.endsWith(
  * The query-parameter URL form, for the one deployment that needs it.
  *
  * Vercel routes `api/index.ts` only at the literal `/api` path; deeper paths
- * like `/api/vpn/v2` fall through to the static 404 without invoking the
- * function. Passing the Proton path in `__path` keeps the request on the one
- * route Vercel serves, and the proxy strips the parameter before forwarding.
- * `via` asks the function to relay the call through a sibling deployment
- * instead of calling Proton itself.
+ * like `/api/vpn/v2` need the `vercel.json` rewrite to reach the function.
+ * Passing the Proton path in `__path` keeps the request on the one route
+ * Vercel serves without any rewrite at all, and the proxy strips the
+ * parameter before forwarding. `via` asks the function to relay the call
+ * through a sibling deployment instead of calling Proton itself.
  */
 function queryUrl(path, via = null) {
 	const url = new URL(path, "https://proxy.invalid")
@@ -32,9 +32,10 @@ function queryUrl(path, via = null) {
 // Tried in order until one answers with a Proton payload.
 //
 // Path-based same-origin first: Deno and Cloudflare route `/api/*` natively,
-// so the normal path involves no extra hop. On Vercel that URL returns the
-// platform's own 404, which carries no Proton Code field, so the call falls
-// through to the query-parameter form, which the Vercel function does serve.
+// so the normal path involves no extra hop. On Vercel that URL only reaches
+// the function through the vercel.json rewrite; when the handoff breaks, the
+// answer carries no Proton Code field (or a routing 404), and the call falls
+// through to the query-parameter form, which always routes.
 //
 // The Vercel deployment additionally relays through its siblings when its own
 // route to Proton fails: Cloudflare first, then Deno, both called by the
@@ -67,7 +68,7 @@ export const API_ENDPOINTS = ON_VERCEL
 /**
  * The endpoint that answered most recently, tried first on the next call.
  *
- * Without this every call on Vercel would pay for a known-dead 404 before
+ * Without this every call on Vercel would pay for a known-dead route before
  * reaching the working form. Only a usable answer sets the preference and only
  * a transport or routing failure clears it, so a deployment whose routing
  * changes mid-visit simply re-discovers its route on the next call.
@@ -107,11 +108,14 @@ export class ProxyUnreachableError extends Error {
  * Performs one API call, trying each proxy in order.
  *
  * Only transport failures and responses that did not come from Proton fall
- * through to the next proxy, with one exception: on the Vercel deployment a
- * 401/403 is retried through the relayed siblings first, because there it
- * usually means Proton distrusts the function's egress IP rather than the
- * session. Any other valid API response, including an error payload, is
- * returned as-is so the caller can react to the Proton error code.
+ * through to the next proxy, with two exceptions: a Proton "Path not found"
+ * (Code 404), which means the route between the page and the API is broken
+ * rather than the data missing — none of the endpoints used here can 404 a
+ * real object — and, on the Vercel deployment, a 401/403, which there usually
+ * means Proton distrusts the function's egress IP rather than the session, so
+ * the relayed siblings get their chance first. Any other valid API response,
+ * including an error payload, is returned as-is so the caller can react to
+ * the Proton error code.
  */
 export async function apiRequest(path, { method = "GET", profile, session = null, body = null, extraHeaders = {}, signal } = {}) {
 	const headers = { ...baseHeaders(profile), ...extraHeaders }
@@ -124,7 +128,7 @@ export async function apiRequest(path, { method = "GET", profile, session = null
 	}
 
 	const failures = []
-	let firstAuthError = null
+	let firstApiError = null
 	const ordered = preferredEndpointId
 		? [...API_ENDPOINTS.filter((endpoint) => endpoint.id === preferredEndpointId), ...API_ENDPOINTS.filter((endpoint) => endpoint.id !== preferredEndpointId)]
 		: API_ENDPOINTS
@@ -178,12 +182,11 @@ export async function apiRequest(path, { method = "GET", profile, session = null
 			continue
 		}
 
-		if (ON_VERCEL && (response.status === 401 || response.status === 403)) {
-			// The relays get their chance; when every route agrees on the 401 the
-			// session really is the problem, and the direct route's answer is the
-			// one the caller sees.
+		if (payload.Code === 404 || (ON_VERCEL && (response.status === 401 || response.status === 403))) {
+			// The other routes get their chance; when every route agrees on the
+			// answer, the first one is what the caller sees.
 			if (endpoint.id === preferredEndpointId) preferredEndpointId = null
-			firstAuthError ??= { payload, status: response.status, endpoint: endpoint.id }
+			firstApiError ??= { payload, status: response.status, endpoint: endpoint.id }
 			failures.push({ endpoint: endpoint.id, reason: `HTTP ${response.status}: ${payload.Error || "API error"}` })
 			continue
 		}
@@ -194,7 +197,7 @@ export async function apiRequest(path, { method = "GET", profile, session = null
 		return { payload, status: response.status, endpoint: endpoint.id }
 	}
 
-	if (firstAuthError) return firstAuthError
+	if (firstApiError) return firstApiError
 	throw new ProxyUnreachableError(failures)
 }
 

@@ -3,7 +3,7 @@
 
 import { createHmac } from "node:crypto"
 
-const PROXY_BUILD = "vercel-node-2026-08-17-5"
+const PROXY_BUILD = "vercel-node-2026-08-17-6"
 
 const UPSTREAMS: Array<{ prefix: string; host: string }> = [
   { prefix: "/verify-api", host: "https://verify-api.proton.me" },
@@ -108,10 +108,59 @@ async function readRequestBody(req: any): Promise<Buffer | undefined> {
   return chunks.length ? Buffer.concat(chunks) : undefined
 }
 
-function requestedPath(url: URL): string {
-  const queryPath = url.searchParams.get("__path")
-  if (queryPath) return queryPath.startsWith("/") ? queryPath : `/${queryPath}`
-  return url.pathname.startsWith("/api") ? url.pathname.slice(4) || "/" : url.pathname
+/** The proxy's own paths never carry the mount prefix. */
+function stripApiPrefix(pathname: string): string {
+  return pathname.startsWith("/api") ? pathname.slice(4) || "/" : pathname
+}
+
+/**
+ * Coerces a candidate into a usable "/..." path, or null when it is not one.
+ * Rewrite destinations that fail to substitute arrive as the literal pattern
+ * (`/:path+`, `/$1`) or double-encoded; the first kind is rejected, the second
+ * repaired. Proton paths never contain a colon, so its presence always means
+ * an unexpanded placeholder.
+ */
+function normalizePathCandidate(value: unknown): string | null {
+  if (typeof value !== "string" || value.length === 0) return null
+  let path = value
+  if (path.includes("%")) {
+    try {
+      path = decodeURIComponent(path)
+    } catch {
+      return null
+    }
+  }
+  if (path.includes(":") || path.includes("[") || path.includes("]") || path.includes("$")) return null
+  if (!path.startsWith("/")) path = `/${path}`
+  return path
+}
+
+/**
+ * The path to forward upstream. The query parameter is what the site's own
+ * client sends; everything else is the platform handing over the path of a
+ * rewritten request, which different routing layers do differently — so every
+ * channel is tried in turn.
+ */
+function requestedPath(url: URL, req: any): string {
+  const queryPath = normalizePathCandidate(url.searchParams.get("__path"))
+  if (queryPath) return stripApiPrefix(queryPath)
+
+  // The vercel.json rewrite captures the subpath, and the captures ride along
+  // in this header as a query string ("1=auth/v4/sessions" or "path=...").
+  const routeMatches = req.headers?.["x-now-route-matches"]
+  if (typeof routeMatches === "string" && routeMatches) {
+    for (const value of new URLSearchParams(routeMatches).values()) {
+      const candidate = normalizePathCandidate(value)
+      if (candidate) return stripApiPrefix(candidate)
+    }
+  }
+
+  for (const header of ["x-vercel-rewrite-url", "x-matched-path"]) {
+    const candidate = normalizePathCandidate(req.headers?.[header])
+    if (candidate) return stripApiPrefix(candidate)
+  }
+
+  return stripApiPrefix(url.pathname)
 }
 
 /** The visitor's address as Vercel reports it to the function. */
@@ -140,7 +189,7 @@ function relayCookie(cookieHeader: unknown, via: string): string | null {
 
 export default async function handler(req: any, res: any) {
   const url = new URL(req.url ?? "/", "http://localhost")
-  const pathname = requestedPath(url)
+  const pathname = requestedPath(url, req)
 
   // Private routing metadata, never part of the forwarded query string.
   url.searchParams.delete("__path")
@@ -156,6 +205,23 @@ export default async function handler(req: any, res: any) {
     applyHeaders(res, cors)
     res.statusCode = 204
     res.end()
+    return
+  }
+
+  // Routing echo: answers before any resolution is trusted, so a broken
+  // rewrite handoff can be inspected instead of guessed at. Only routing
+  // metadata is echoed, never auth headers.
+  if (url.searchParams.has("__debug")) {
+    sendJson(res, 200, cors, {
+      build: PROXY_BUILD,
+      method: req.method ?? null,
+      url: req.url ?? null,
+      resolvedPath: pathname,
+      queryPath: url.searchParams.get("__path"),
+      routeMatches: req.headers?.["x-now-route-matches"] ?? null,
+      matchedPath: req.headers?.["x-matched-path"] ?? null,
+      rewriteUrl: req.headers?.["x-vercel-rewrite-url"] ?? null,
+    })
     return
   }
 
