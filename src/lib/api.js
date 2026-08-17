@@ -7,12 +7,18 @@
 
 import { baseHeaders } from "./spoof.js"
 
+function vercelUrl(path) {
+	const url = new URL(path, "https://proxy.invalid")
+	url.searchParams.set("__path", url.pathname)
+	return `/api?${url.searchParams.toString()}`
+}
+
 // Vercel only routes api/index.ts at the literal /api path. Passing the Proton
 // path in a query parameter keeps every same-origin request on that function;
 // the proxy removes the private parameter before forwarding the real query.
 // Deno still accepts the original catch-all URL and remains the fallback.
 export const API_ENDPOINTS = [
-	{ id: "same-origin", urlFor: (path) => `/api?__path=${encodeURIComponent(path)}` },
+	{ id: "same-origin", urlFor: vercelUrl },
 	{ id: "deno", urlFor: (path) => `https://protonvpn-next-web--main.smh01-mirrors.deno.net/api${path}` },
 ]
 
