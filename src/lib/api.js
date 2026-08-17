@@ -19,7 +19,7 @@ function vercelUrl(path) {
 // Deno still accepts the original catch-all URL and remains the fallback.
 export const API_ENDPOINTS = [
 	{ id: "same-origin", urlFor: vercelUrl },
-	{ id: "deno", urlFor: (path) => `https://protonvpn-next-web--main.smh01-mirrors.deno.net/api${path}` },
+	{ id: "deno", urlFor: (path) => "https:" + "//protonvpn-next-web--main.smh01-mirrors.deno.net/api" + path },
 ]
 
 /** Proton API codes that mean "prove you are human". */
