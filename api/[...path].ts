@@ -14,20 +14,12 @@
  *   present in the Deno/Cloudflare deployments. For production rate-limiting
  *   or replay behaviour use an external store (Redis/Upstash) and extend the
  *   logic accordingly.
+ * - CORS is intentionally open: no origin allowlist. The custom domain is
+ *   served by the Cloudflare deployment; Vercel mirrors accept any origin.
  * - Deploy by placing this file at `api/[...path].ts` in the repository root.
  */
 
-const PROXY_BUILD = "vercel-node-2026-08-17-2"
-
-const ALLOWED_ORIGIN_PATTERNS: RegExp[] = [
-  /^https:\/\/([a-z0-9-]+\.)*protonnext\.qzz\.io$/,
-  /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/,
-  // Vercel preview/production hosts if you want to allow them add here
-]
-
-function isAllowedOrigin(origin: string): boolean {
-  return ALLOWED_ORIGIN_PATTERNS.some((p) => p.test(origin))
-}
+const PROXY_BUILD = "vercel-node-2026-08-17-3"
 
 const UPSTREAMS: Array<{ prefix: string; host: string }> = [
   { prefix: "/verify-api", host: "https://verify-api.proton.me" },
@@ -77,16 +69,16 @@ const FORWARDED_REQUEST_HEADERS = [
 ]
 
 function corsHeaders(origin: string): Record<string, string> {
+  // No allowlist: reflect the caller's Origin (credentials-compatible),
+  // fall back to "*" for non-browser clients that send no Origin header.
   const headers: Record<string, string> = {
+    "access-control-allow-origin": origin || "*",
     "access-control-allow-methods": "GET, POST, PUT, DELETE, OPTIONS",
     "access-control-allow-headers": FORWARDED_REQUEST_HEADERS.join(", "),
     "access-control-max-age": "600",
     vary: "Origin",
   }
-  if (isAllowedOrigin(origin)) {
-    headers["access-control-allow-origin"] = origin
-    headers["access-control-allow-credentials"] = "true"
-  }
+  if (origin) headers["access-control-allow-credentials"] = "true"
   return headers
 }
 
@@ -142,7 +134,6 @@ export default async function handler(req: any, res: any) {
       runtime: "node",
       node: process.version,
       origin,
-      originAllowed: isAllowedOrigin(origin),
     })
     return
   }
