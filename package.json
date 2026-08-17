@@ -10,7 +10,11 @@
     "preview": "vite preview",
     "test": "node --test \"tests/**/*.test.js\"",
     "event": "node scripts/event-bypass.js",
-    "deploy": "npm run build && wrangler deploy"
+    "deploy": "npm run build && wrangler deploy",
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.0.0",
