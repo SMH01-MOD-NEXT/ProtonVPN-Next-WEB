@@ -23,16 +23,16 @@ function queryUrl(path) {
 	return `/api?${url.searchParams.toString()}`
 }
 
-// Tried in order until one answers with a parseable response.
+// Tried in order until one answers with a Proton payload.
 //
 // Path-based same-origin first: Deno and Cloudflare route `/api/*` natively,
 // so the normal path involves no extra hop. On Vercel that URL returns the
-// static 404 page, and HTML never parses as JSON, so the call falls through to
-// the query-parameter form, which the Vercel function does serve. The absolute
-// Deno URL stays as a last resort for the case where the site is served from
-// somewhere without a proxy of its own, such as a local `vite preview` or a
-// static copy; it is subject to CORS and may be unreachable, which the caller
-// already handles as a proxy failure.
+// platform's own 404, which carries no Proton Code field, so the call falls
+// through to the query-parameter form, which the Vercel function does serve.
+// The absolute Deno URL stays as a last resort for the case where the site is
+// served from somewhere without a proxy of its own, such as a local
+// `vite preview` or a static copy; it is subject to CORS and may be
+// unreachable, which the caller already handles as a proxy failure.
 export const API_ENDPOINTS = [
 	{ id: "same-origin", urlFor: (path) => `/api${path}` },
 	{ id: "same-origin-query", urlFor: queryUrl },
@@ -44,7 +44,7 @@ export const API_ENDPOINTS = [
  *
  * Without this every call on Vercel would pay for a known-dead 404 before
  * reaching the working form. Only a usable answer sets the preference and only
- * a transport or parse failure clears it, so a deployment whose routing
+ * a transport or routing failure clears it, so a deployment whose routing
  * changes mid-visit simply re-discovers its route on the next call.
  */
 let preferredEndpointId = null
@@ -81,9 +81,9 @@ export class ProxyUnreachableError extends Error {
 /**
  * Performs one API call, trying each proxy in order.
  *
- * Only transport failures and unparseable responses fall through to the next
- * proxy. A valid API response, including an error payload, is returned as-is
- * so the caller can react to the Proton error code.
+ * Only transport failures and responses that did not come from Proton fall
+ * through to the next proxy. A valid API response, including an error
+ * payload, is returned as-is so the caller can react to the Proton error code.
  */
 export async function apiRequest(path, { method = "GET", profile, session = null, body = null, extraHeaders = {}, signal } = {}) {
 	const headers = { ...baseHeaders(profile), ...extraHeaders }
@@ -124,21 +124,27 @@ export async function apiRequest(path, { method = "GET", profile, session = null
 		}
 
 		const raw = await response.text()
-		// An empty error page is a dead route, not an answer from Proton.
-		if (!raw && !response.ok) {
-			if (endpoint.id === preferredEndpointId) preferredEndpointId = null
-			failures.push({ endpoint: endpoint.id, reason: `Empty response (HTTP ${response.status})` })
-			continue
-		}
 
 		let payload = null
 		try {
-			payload = raw ? JSON.parse(raw) : {}
+			payload = raw ? JSON.parse(raw) : null
 		} catch {
+			payload = null
+		}
+
+		// Only a payload with Proton's Code field counts as an answer from the
+		// API. The platform's own error page is not one: Vercel's unrouted 404
+		// is valid JSON too — {"error": {"code": "404"}} — so parseable alone
+		// proves nothing. HTML pages, empty bodies and platform error JSON all
+		// mean this URL form is not routed to the proxy, and the next form gets
+		// its turn. A Proton error Code is authoritative and never falls
+		// through: the caller reacts to it, including a proxy's own 429/502
+		// payloads, which carry Code 0 by convention.
+		if (payload === null || typeof payload.Code !== "number") {
 			if (endpoint.id === preferredEndpointId) preferredEndpointId = null
 			failures.push({
 				endpoint: endpoint.id,
-				reason: `Malformed response (HTTP ${response.status}, ${response.headers.get("content-type") || "unknown content type"})`,
+				reason: `Non-API response (HTTP ${response.status}, ${response.headers.get("content-type") || "unknown content type"})`,
 			})
 			continue
 		}
