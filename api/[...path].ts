@@ -1,6 +1,12 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /**
- * Vercel Edge function to proxy /api/* requests to Proton VPN API.
+ * Vercel serverless function proxying /api/* requests to the Proton VPN API.
+ *
+ * Runs on the Node.js runtime on purpose: the Edge Runtime is unavailable to
+ * recently created Vercel projects, and an edge function in this repository
+ * built without any error yet never routed — every /api/* request fell
+ * through to the static 404 while the site itself deployed fine. The Node
+ * runtime is the one runtime every Vercel project can still create.
  *
  * Notes:
  * - This implementation intentionally focuses on safe, single-domain proxying
@@ -9,14 +15,9 @@
  *   or replay behaviour use an external store (Redis/Upstash) and extend the
  *   logic accordingly.
  * - Deploy by placing this file at `api/[...path].ts` in the repository root.
- * - The function runs on the Edge runtime (Vercel): it uses standard Web APIs.
  */
 
-export const config = {
-  runtime: "edge",
-}
-
-const PROXY_BUILD = "vercel-edge-2026-08-17"
+const PROXY_BUILD = "vercel-node-2026-08-17"
 
 const ALLOWED_ORIGIN_PATTERNS: RegExp[] = [
   /^https:\/\/([a-z0-9-]+\.)*protonnext\.qzz\.io$/,
@@ -89,70 +90,102 @@ function corsHeaders(origin: string): Record<string, string> {
   return headers
 }
 
-export default async function handler(req: Request) {
-  const url = new URL(req.url)
+function applyHeaders(res: any, headers: Record<string, string>) {
+  for (const [name, value] of Object.entries(headers)) res.setHeader(name, value)
+}
+
+function sendJson(res: any, status: number, headers: Record<string, string>, payload: unknown) {
+  applyHeaders(res, { ...headers, "content-type": "application/json" })
+  res.statusCode = status
+  res.end(JSON.stringify(payload))
+}
+
+/**
+ * Reads the request body whichever way the runtime exposes it: @vercel/node
+ * pre-parses JSON bodies into `req.body`, anything else stays on the raw
+ * stream. Proton only accepts JSON on the write endpoints, so re-serializing
+ * an already parsed body loses nothing.
+ */
+async function readRequestBody(req: any): Promise<Buffer | undefined> {
+  if (req.body !== undefined && req.body !== null) {
+    if (Buffer.isBuffer(req.body)) return req.body
+    if (typeof req.body === "string") return Buffer.from(req.body)
+    return Buffer.from(JSON.stringify(req.body))
+  }
+  const chunks: Buffer[] = []
+  for await (const chunk of req) chunks.push(Buffer.from(chunk))
+  return chunks.length ? Buffer.concat(chunks) : undefined
+}
+
+export default async function handler(req: any, res: any) {
+  const url = new URL(req.url ?? "/", "http://localhost")
   // Vercel maps /api/* to this function; the request URL contains the full
   // path including /api. We strip the leading /api to match the project's
   // routing semantics.
   const pathname = url.pathname.startsWith("/api") ? url.pathname.slice(4) || "/" : url.pathname
 
-  const origin = req.headers.get("origin") ?? ""
+  const origin = typeof req.headers?.origin === "string" ? req.headers.origin : ""
   const cors = corsHeaders(origin)
   cors["access-control-expose-headers"] = EXPOSED_RESPONSE_HEADERS.join(", ")
 
   if (req.method === "OPTIONS") {
-    return new Response(null, { status: 204, headers: cors })
+    applyHeaders(res, cors)
+    res.statusCode = 204
+    res.end()
+    return
   }
 
-  // Health endpoint
+  // Health endpoint: tells a live deploy from a stale one by its build tag.
   if (pathname === "/__proxy/health") {
-    return new Response(JSON.stringify({ build: PROXY_BUILD, origin, originAllowed: isAllowedOrigin(origin) }), {
-      status: 200,
-      headers: { ...cors, "content-type": "application/json" },
+    sendJson(res, 200, cors, {
+      build: PROXY_BUILD,
+      runtime: "node",
+      node: process.version,
+      origin,
+      originAllowed: isAllowedOrigin(origin),
     })
+    return
   }
 
   // Restrict proxying strictly to Proton upstreams only.
   // Resolve upstream and forward.
   const target = `${resolveUpstream(pathname)}${url.search}`
 
-  // Build forwarded headers
-  const forwardHeaders = new Headers()
+  // Build forwarded headers (Node lowercases request header names).
+  const forwardHeaders: Record<string, string> = {}
   for (const name of FORWARDED_REQUEST_HEADERS) {
-    const v = req.headers.get(name)
-    if (v) forwardHeaders.set(name, v)
+    const v = req.headers?.[name]
+    if (typeof v === "string") forwardHeaders[name] = v
   }
 
   // Keep a reasonable user-agent when none is provided.
-  if (!forwardHeaders.get("user-agent")) forwardHeaders.set("user-agent", "pvpn-next-vercel-proxy/1.0")
+  if (!forwardHeaders["user-agent"]) forwardHeaders["user-agent"] = "pvpn-next-vercel-proxy/1.0"
+
+  const body = ["GET", "HEAD"].includes(req.method ?? "GET") ? undefined : await readRequestBody(req)
 
   let upstreamResponse: Response
   try {
     upstreamResponse = await fetch(target, {
       method: req.method,
       headers: forwardHeaders,
-      body: ["GET", "HEAD"].includes(req.method) ? undefined : await req.text(),
+      body,
       redirect: "follow",
     })
   } catch (err: any) {
-    return new Response(JSON.stringify({ Code: 0, Error: `Upstream unreachable: ${err?.toString()}` }), {
-      status: 502,
-      headers: { ...cors, "content-type": "application/json" },
-    })
+    sendJson(res, 502, cors, { Code: 0, Error: `Upstream unreachable: ${err?.toString()}` })
+    return
   }
 
-  const responseHeaders = new Headers(cors)
-  for (const [name, value] of upstreamResponse.headers) {
+  applyHeaders(res, cors)
+  upstreamResponse.headers.forEach((value, name) => {
     const lower = name.toLowerCase()
-    if (STRIPPED_RESPONSE_HEADERS.has(lower)) continue
-    if (lower.startsWith("access-control-")) continue
-    responseHeaders.set(name, value)
-  }
-
-  const body = await upstreamResponse.text()
-
-  return new Response(body, {
-    status: upstreamResponse.status,
-    headers: responseHeaders,
+    if (STRIPPED_RESPONSE_HEADERS.has(lower)) return
+    if (lower.startsWith("access-control-")) return
+    res.setHeader(name, value)
   })
+
+  const upstreamBody = Buffer.from(await upstreamResponse.arrayBuffer())
+
+  res.statusCode = upstreamResponse.status
+  res.end(upstreamBody)
 }
