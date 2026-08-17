@@ -53,11 +53,13 @@ through Workers Builds with build command `npm run build` and deploy command `np
 a manual `npm run deploy` from a checkout does the same thing. The deployment owns the custom domain
 `home.protonnext.qzz.io`, so its proxy answers `https://home.protonnext.qzz.io/api/...` directly.
 
-**Vercel** — builds on push; the functions in `api/` answer `/api`. When the direct route to Proton
-fails, the function relays the same request server-side through the Cloudflare deployment first and
-the Deno one second: the browser never has to reach any origin but Vercel's, which keeps the
-generator usable from heavily censored networks and on days when Proton distrusts Vercel's egress
-addresses.
+**Vercel** — builds on push; the functions in `api/` answer `/api`. A `vercel.json` rewrite maps
+`/api/*` onto the same function, so path-based clients like the app and the CLI can use the
+deployment as a plain proxy base without learning the query-parameter form. When the direct route
+to Proton fails, the function relays the same request server-side through the Cloudflare deployment
+first and the Deno one second: the browser never has to reach any origin but Vercel's, which keeps
+the generator usable from heavily censored networks and on days when Proton distrusts Vercel's
+egress addresses.
 
 **Container hosts** — `proxy/northflank/Dockerfile` builds the same site and proxy as one image;
 `proxy/northflank/README.md` covers Northflank and `proxy/choreo/README.md` covers Choreo. Keep it
