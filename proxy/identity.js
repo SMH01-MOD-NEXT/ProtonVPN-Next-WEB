@@ -104,6 +104,30 @@ export async function issueCookie(secret) {
 }
 
 /**
+ * The visitor address a trusted sibling deployment relays for this call.
+ *
+ * The Vercel function sends its fallbacks here server-side, so without this
+ * header every relayed visitor would share the function's one address — a
+ * single IP-scoped bucket whose replayed answers would leak across visitors.
+ * The header is `<address>.<signature>`, HMAC-SHA256 keyed by a secret the
+ * deployments share. An unsigned or badly signed claim is ignored rather than
+ * trusted, because accepting one would let any caller pick their own quota
+ * identity; with no shared secret configured the header is ignored entirely.
+ */
+export async function readRelayAddress(header, secret) {
+	if (!header || !secret) return null
+
+	const separator = header.lastIndexOf(".")
+	if (separator < 1) return null
+
+	const address = header.slice(0, separator)
+	const signature = header.slice(separator + 1)
+	if (!address || address.length > 64) return null
+
+	return equals(await hmac(secret, address), signature) ? address : null
+}
+
+/**
  * The caller's address.
  *
  * `cf-connecting-ip` is set by Cloudflare and cannot be spoofed from outside;
@@ -133,14 +157,17 @@ export async function addressIdentity(address, secret) {
  * @returns `{ scopes, setCookie }` where `scopes` is the list the quota code
  *   counts against and `setCookie` is a header value to attach, if any.
  */
-export async function resolveIdentity(request, { secret, address = "" } = {}) {
+export async function resolveIdentity(request, { secret, relaySecret = "", address = "" } = {}) {
 	const existing = await readSignedCookie(request.headers.get("cookie"), secret)
 	const issued = existing ? null : await issueCookie(secret)
 	const cookieId = existing ?? issued.id
 
 	const scopes = [{ scope: SCOPE_COOKIE, identity: cookieId }]
 
-	const hashedAddress = await addressIdentity(clientAddress(request, address), secret)
+	// A verified relay header names the real visitor; without one the address
+	// of the direct connection is counted, exactly as before.
+	const relayed = await readRelayAddress(request.headers.get("x-pvpn-relay"), relaySecret)
+	const hashedAddress = await addressIdentity(relayed ?? clientAddress(request, address), secret)
 	if (hashedAddress) scopes.push({ scope: SCOPE_IP, identity: hashedAddress })
 
 	return { scopes, setCookie: issued?.header ?? null }

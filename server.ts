@@ -16,7 +16,7 @@ import { handleProxyRequest } from "./proxy/core.ts"
 import { proxyPathname, wantsAppShell } from "./proxy/routing.ts"
 import { createDenoStore } from "./proxy/store.js"
 
-/** Vite's build output, committed so a deployment never depends on a build step. */
+/** Vite's build output, produced by the deployment's own build step. */
 const STATIC_ROOT = "dist"
 
 /**
@@ -28,6 +28,7 @@ const STATIC_ROOT = "dist"
  */
 const quotaStore = await createDenoStore()
 const quotaSecret = Deno.env.get("PVPN_QUOTA_SECRET") ?? ""
+const relaySecret = Deno.env.get("PVPN_RELAY_SECRET") ?? ""
 
 /**
  * Listening port.
@@ -47,6 +48,7 @@ Deno.serve({ port }, async (request: Request, info?: Deno.ServeHandlerInfo): Pro
 		return await handleProxyRequest(request, proxied, {
 			store: quotaStore,
 			secret: quotaSecret,
+			relaySecret,
 			// Behind Deno Deploy the address arrives in a header; locally it does
 			// not, and the connection info is the only way to tell callers apart.
 			address: (info?.remoteAddr as Deno.NetAddr | undefined)?.hostname ?? "",
