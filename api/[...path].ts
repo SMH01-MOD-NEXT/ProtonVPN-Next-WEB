@@ -17,7 +17,7 @@
  * - Deploy by placing this file at `api/[...path].ts` in the repository root.
  */
 
-const PROXY_BUILD = "vercel-node-2026-08-17"
+const PROXY_BUILD = "vercel-node-2026-08-17-2"
 
 const ALLOWED_ORIGIN_PATTERNS: RegExp[] = [
   /^https:\/\/([a-z0-9-]+\.)*protonnext\.qzz\.io$/,
@@ -168,7 +168,9 @@ export default async function handler(req: any, res: any) {
     upstreamResponse = await fetch(target, {
       method: req.method,
       headers: forwardHeaders,
-      body,
+      // Node's Buffer is a valid runtime payload but is not part of the
+      // fetch BodyInit type from undici-types; cast at the call site.
+      body: body as unknown as BodyInit | undefined,
       redirect: "follow",
     })
   } catch (err: any) {
