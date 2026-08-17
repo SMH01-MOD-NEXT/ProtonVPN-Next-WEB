@@ -3,23 +3,17 @@
  *
  * The API cannot be called directly from a page (no CORS headers on
  * vpn-api.proton.me), so every request goes through the proxy in `proxy/core.ts`.
- * Both hosts run their own copy of it under `/api`, so the site always has a
- * proxy on its own origin and neither deployment burns the other's quota.
  */
 
 import { baseHeaders } from "./spoof.js"
 
-// Tried in order until one answers.
-//
-// Same-origin first: both deployments mount the proxy under `/api`, so the
-// normal path involves no preflight, no allow-list and no cross-host quota.
-// The absolute URL stays as a last resort for the case where the site is served
-// from somewhere without a proxy of its own, such as a local `vite preview` or
-// a static copy; it is subject to CORS and may be unreachable, which the caller
-// already handles as a proxy failure.
+// Vercel only routes api/index.ts at the literal /api path. Passing the Proton
+// path in a query parameter keeps every same-origin request on that function;
+// the proxy removes the private parameter before forwarding the real query.
+// Deno still accepts the original catch-all URL and remains the fallback.
 export const API_ENDPOINTS = [
-	{ id: "same-origin", url: "/api" },
-	{ id: "deno", url: "https://protonvpn-next-web--main.smh01-mirrors.deno.net/api" },
+	{ id: "same-origin", urlFor: (path) => `/api?__path=${encodeURIComponent(path)}` },
+	{ id: "deno", urlFor: (path) => `https://protonvpn-next-web--main.smh01-mirrors.deno.net/api${path}` },
 ]
 
 /** Proton API codes that mean "prove you are human". */
@@ -36,13 +30,11 @@ export class ApiError extends Error {
 		this.body = body
 	}
 
-	/** True when the API wants human verification, which triggers a profile swap. */
 	get needsVerification() {
 		return this.code === CODE_HUMAN_VERIFICATION || this.code === CODE_CAPTCHA_EXPIRED
 	}
 }
 
-/** Raised when no proxy could be reached at all. */
 export class ProxyUnreachableError extends Error {
 	constructor(failures) {
 		super("No API proxy could be reached")
@@ -51,43 +43,27 @@ export class ProxyUnreachableError extends Error {
 	}
 }
 
-/**
- * Performs one API call, trying each proxy in order.
- *
- * Only transport failures fall through to the next proxy. A valid API response,
- * including an error payload, is returned as-is so the caller can react to the
- * Proton error code.
- */
 export async function apiRequest(path, { method = "GET", profile, session = null, body = null, extraHeaders = {}, signal } = {}) {
 	const headers = { ...baseHeaders(profile), ...extraHeaders }
 
-	if (session?.accessToken) {
-		headers.Authorization = `Bearer ${session.accessToken}`
-	}
-	if (session?.uid) {
-		headers["x-pm-uid"] = session.uid
-	}
+	if (session?.accessToken) headers.Authorization = `Bearer ${session.accessToken}`
+	if (session?.uid) headers["x-pm-uid"] = session.uid
 
 	const failures = []
 
 	for (const endpoint of API_ENDPOINTS) {
 		let response
 		try {
-			response = await fetch(`${endpoint.url}${path}`, {
+			response = await fetch(endpoint.urlFor(path), {
 				method,
 				headers,
 				body: body === null ? undefined : JSON.stringify(body),
 				signal,
-				// The proxy counts refreshes against a cookie it signs itself, so
-				// the cookie has to ride along; nothing Proton sets is ever kept,
-				// because the proxy strips upstream `Set-Cookie` headers.
 				credentials: endpoint.id === "same-origin" ? "same-origin" : "include",
 				mode: "cors",
 			})
 		} catch (error) {
 			if (error?.name === "AbortError") throw error
-			// A CORS rejection is indistinguishable from a network failure here, so
-			// both simply move on to the next proxy.
 			failures.push({ endpoint: endpoint.id, reason: String(error) })
 			continue
 		}
@@ -97,7 +73,10 @@ export async function apiRequest(path, { method = "GET", profile, session = null
 		try {
 			payload = raw ? JSON.parse(raw) : {}
 		} catch {
-			failures.push({ endpoint: endpoint.id, reason: `Malformed response (HTTP ${response.status})` })
+			failures.push({
+				endpoint: endpoint.id,
+				reason: `Malformed response (HTTP ${response.status}, ${response.headers.get("content-type") || "unknown content type"})`,
+			})
 			continue
 		}
 
@@ -107,7 +86,6 @@ export async function apiRequest(path, { method = "GET", profile, session = null
 	throw new ProxyUnreachableError(failures)
 }
 
-/** Same as `apiRequest`, but turns a non-1000 API code into an `ApiError`. */
 export async function apiCall(path, options) {
 	const { payload, status } = await apiRequest(path, options)
 
