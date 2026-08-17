@@ -1,31 +1,31 @@
 {
   "nightly": {
     "debug": {
-      "versionCode": 605160338,
-      "versionName": "12.0.0-alpha2st3-2-gca614d1-nightly",
+      "versionCode": 605160344,
+      "versionName": "12.0.0-alpha2st3-8-g4f21e95-nightly",
       "url": "https://r2.protonnext.qzz.io/VPN-Next-TEST/app-nightly-standard-debug.apk",
-      "changelog": "Merge seer AI changes\n\nfix: Anti-tamper false positive on ART JIT cache",
+      "changelog": "Update Netlify badge link to point to deployed site",
       "force": false
     },
     "release": {
-      "versionCode": 605160338,
-      "versionName": "12.0.0-alpha2st3-2-gca614d1-nightly",
+      "versionCode": 605160344,
+      "versionName": "12.0.0-alpha2st3-8-g4f21e95-nightly",
       "url": "https://r2.protonnext.qzz.io/VPN-Next-TEST/app-nightly-standard-release.apk",
-      "changelog": "Merge seer AI changes\n\nfix: Anti-tamper false positive on ART JIT cache",
+      "changelog": "Update Netlify badge link to point to deployed site",
       "force": false
     },
     "privacyDebug": {
-      "versionCode": 605160338,
-      "versionName": "12.0.0-alpha2st3-2-gca614d1-nightly",
+      "versionCode": 605160344,
+      "versionName": "12.0.0-alpha2st3-8-g4f21e95-nightly",
       "url": "https://r2.protonnext.qzz.io/VPN-Next-TEST/app-nightly-privacy-debug.apk",
-      "changelog": "Merge seer AI changes\n\nfix: Anti-tamper false positive on ART JIT cache",
+      "changelog": "Update Netlify badge link to point to deployed site",
       "force": false
     },
     "privacyRelease": {
-      "versionCode": 605160338,
-      "versionName": "12.0.0-alpha2st3-2-gca614d1-nightly",
+      "versionCode": 605160344,
+      "versionName": "12.0.0-alpha2st3-8-g4f21e95-nightly",
       "url": "https://r2.protonnext.qzz.io/VPN-Next-TEST/app-nightly-privacy-release.apk",
-      "changelog": "Merge seer AI changes\n\nfix: Anti-tamper false positive on ART JIT cache",
+      "changelog": "Update Netlify badge link to point to deployed site",
       "force": false
     }
   },
