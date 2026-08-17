@@ -8,8 +8,8 @@
  *
  * Caveat worth remembering: Proton rate-limits Cloudflare egress noticeably
  * harder than other providers, so this path can hit verification challenges
- * where Deno does not. That is what the spoof profile rotation is for, and it is
- * why the Deno deployment stays the primary one.
+ * where Deno does not. That is what the spoof profile rotation is for, and it
+ * is why the Deno deployment stays the primary one.
  */
 
 import { handleProxyRequest } from "../proxy/core.ts"
@@ -27,6 +27,8 @@ interface Env {
 	QUOTA?: KVNamespace
 	/** Signing secret for the quota cookie and the hashed addresses. */
 	PVPN_QUOTA_SECRET?: string
+	/** Shared secret verifying the caller address the Vercel relay claims. */
+	PVPN_RELAY_SECRET?: string
 }
 
 export default {
@@ -38,6 +40,7 @@ export default {
 			return await handleProxyRequest(request, proxied, {
 				store: createWorkerStore(env),
 				secret: env.PVPN_QUOTA_SECRET ?? "",
+				relaySecret: env.PVPN_RELAY_SECRET ?? "",
 			})
 		}
 

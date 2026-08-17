@@ -16,7 +16,9 @@
  *
  * Nothing here trusts the request beyond its path: no header, cookie value or
  * body can raise a limit, and the client is never told anything it could act on
- * beyond the informational `x-pvpn-quota-*` headers.
+ * beyond the informational `x-pvpn-quota-*` headers. The one exception is the
+ * relay signature, which proves a sibling deployment vouches for the caller's
+ * address rather than the caller claiming one.
  */
 
 import { resolveIdentity } from "./identity.js"
@@ -49,8 +51,8 @@ function exhaustedBody(resetAt) {
  *     either a replay of the caller's own last answer or a rate-limit error.
  *   - `commit(status, body)` records the outcome of a forwarded call.
  */
-export async function openQuotaGate(request, pathname, { store, secret, address = "" } = {}) {
-	const { scopes, setCookie } = await resolveIdentity(request, { secret, address })
+export async function openQuotaGate(request, pathname, { store, secret, relaySecret = "", address = "" } = {}) {
+	const { scopes, setCookie } = await resolveIdentity(request, { secret, relaySecret, address })
 	const rule = ruleFor(pathname)
 
 	if (!rule || !store) {
