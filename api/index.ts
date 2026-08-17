@@ -1,25 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-/**
- * Vercel serverless function proxying /api/* requests to the Proton VPN API.
- *
- * Runs on the Node.js runtime on purpose: the Edge Runtime is unavailable to
- * recently created Vercel projects, and an edge function in this repository
- * built without any error yet never routed — every /api/* request fell
- * through to the static 404 while the site itself deployed fine. The Node
- * runtime is the one runtime every Vercel project can still create.
- *
- * Notes:
- * - This implementation intentionally focuses on safe, single-domain proxying
- *   (only Proton upstreams are allowed). It does not implement the quota gate
- *   present in the Deno/Cloudflare deployments. For production rate-limiting
- *   or replay behaviour use an external store (Redis/Upstash) and extend the
- *   logic accordingly.
- * - CORS is intentionally open: no origin allowlist. The custom domain is
- *   served by the Cloudflare deployment; Vercel mirrors accept any origin.
- * - Deploy by placing this file at `api/[...path].ts` in the repository root.
- */
+/** Vercel serverless function proxying requests to the Proton VPN API. */
 
-const PROXY_BUILD = "vercel-node-2026-08-17-3"
+const PROXY_BUILD = "vercel-node-2026-08-17-4"
 
 const UPSTREAMS: Array<{ prefix: string; host: string }> = [
   { prefix: "/verify-api", host: "https://verify-api.proton.me" },
@@ -69,8 +51,6 @@ const FORWARDED_REQUEST_HEADERS = [
 ]
 
 function corsHeaders(origin: string): Record<string, string> {
-  // No allowlist: reflect the caller's Origin (credentials-compatible),
-  // fall back to "*" for non-browser clients that send no Origin header.
   const headers: Record<string, string> = {
     "access-control-allow-origin": origin || "*",
     "access-control-allow-methods": "GET, POST, PUT, DELETE, OPTIONS",
@@ -92,12 +72,6 @@ function sendJson(res: any, status: number, headers: Record<string, string>, pay
   res.end(JSON.stringify(payload))
 }
 
-/**
- * Reads the request body whichever way the runtime exposes it: @vercel/node
- * pre-parses JSON bodies into `req.body`, anything else stays on the raw
- * stream. Proton only accepts JSON on the write endpoints, so re-serializing
- * an already parsed body loses nothing.
- */
 async function readRequestBody(req: any): Promise<Buffer | undefined> {
   if (req.body !== undefined && req.body !== null) {
     if (Buffer.isBuffer(req.body)) return req.body
@@ -109,12 +83,19 @@ async function readRequestBody(req: any): Promise<Buffer | undefined> {
   return chunks.length ? Buffer.concat(chunks) : undefined
 }
 
+function requestedPath(url: URL): string {
+  const queryPath = url.searchParams.get("__path")
+  if (queryPath) return queryPath.startsWith("/") ? queryPath : `/${queryPath}`
+  return url.pathname.startsWith("/api") ? url.pathname.slice(4) || "/" : url.pathname
+}
+
 export default async function handler(req: any, res: any) {
   const url = new URL(req.url ?? "/", "http://localhost")
-  // Vercel maps /api/* to this function; the request URL contains the full
-  // path including /api. We strip the leading /api to match the project's
-  // routing semantics.
-  const pathname = url.pathname.startsWith("/api") ? url.pathname.slice(4) || "/" : url.pathname
+  const pathname = requestedPath(url)
+
+  // __path is private routing metadata, not part of Proton's query string.
+  url.searchParams.delete("__path")
+  const search = url.searchParams.toString()
 
   const origin = typeof req.headers?.origin === "string" ? req.headers.origin : ""
   const cors = corsHeaders(origin)
@@ -127,7 +108,6 @@ export default async function handler(req: any, res: any) {
     return
   }
 
-  // Health endpoint: tells a live deploy from a stale one by its build tag.
   if (pathname === "/__proxy/health") {
     sendJson(res, 200, cors, {
       build: PROXY_BUILD,
@@ -138,18 +118,13 @@ export default async function handler(req: any, res: any) {
     return
   }
 
-  // Restrict proxying strictly to Proton upstreams only.
-  // Resolve upstream and forward.
-  const target = `${resolveUpstream(pathname)}${url.search}`
+  const target = `${resolveUpstream(pathname)}${search ? `?${search}` : ""}`
 
-  // Build forwarded headers (Node lowercases request header names).
   const forwardHeaders: Record<string, string> = {}
   for (const name of FORWARDED_REQUEST_HEADERS) {
-    const v = req.headers?.[name]
-    if (typeof v === "string") forwardHeaders[name] = v
+    const value = req.headers?.[name]
+    if (typeof value === "string") forwardHeaders[name] = value
   }
-
-  // Keep a reasonable user-agent when none is provided.
   if (!forwardHeaders["user-agent"]) forwardHeaders["user-agent"] = "pvpn-next-vercel-proxy/1.0"
 
   const body = ["GET", "HEAD"].includes(req.method ?? "GET") ? undefined : await readRequestBody(req)
@@ -159,8 +134,6 @@ export default async function handler(req: any, res: any) {
     upstreamResponse = await fetch(target, {
       method: req.method,
       headers: forwardHeaders,
-      // Node's Buffer is a valid runtime payload but is not part of the
-      // fetch BodyInit type from undici-types; cast at the call site.
       body: body as unknown as BodyInit | undefined,
       redirect: "follow",
     })
@@ -178,7 +151,6 @@ export default async function handler(req: any, res: any) {
   })
 
   const upstreamBody = Buffer.from(await upstreamResponse.arrayBuffer())
-
   res.statusCode = upstreamResponse.status
   res.end(upstreamBody)
 }

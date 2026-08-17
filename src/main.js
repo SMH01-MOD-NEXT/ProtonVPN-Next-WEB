@@ -6,6 +6,7 @@ import {
 	initI18n,
 	setLanguage,
 } from "./i18n/index.js"
+import { installDiagnostics } from "./lib/diagnostics.js"
 import { mountDownloads } from "./ui/downloads.js"
 import { mountGenerator } from "./ui/generator.js"
 
@@ -28,6 +29,7 @@ function setupLanguageSwitcher() {
 
 function start() {
 	initI18n()
+	installDiagnostics()
 	setupLanguageSwitcher()
 
 	const downloadsRoot = document.querySelector("#downloads-root")
