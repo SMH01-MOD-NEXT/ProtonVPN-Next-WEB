@@ -162,6 +162,7 @@
   "gen_bulk_scope_server": "سرور انتخاب‌شده",
   "gen_bulk_scope_city": "همین شهر",
   "gen_bulk_scope_country": "همین کشور",
+  "gen_bulk_scope_countries": "یکی برای هر کشور",
   "gen_bulk_scope_all": "همهٔ سرورها",
   "gen_bulk_count": "پیکربندی",
   "gen_bulk_note": "همهٔ فایل‌های یک دانلود یک جفت کلید و یک گواهی مشترک دارند: پروتون گواهی را برای کلید صادر می‌کند، نه برای سرور.",
