@@ -162,6 +162,7 @@
   "gen_bulk_scope_server": "Абраны сервер",
   "gen_bulk_scope_city": "Гэты горад",
   "gen_bulk_scope_country": "Гэтая краіна",
+  "gen_bulk_scope_countries": "Па адным на краіну",
   "gen_bulk_scope_all": "Усе серверы",
   "gen_bulk_count": "канфігурацый",
   "gen_bulk_note": "Усе файлы адной выгрузкі маюць агульную пару ключоў і сертыфікат: Proton выдае сертыфікат на ключ, а не на сервер.",
