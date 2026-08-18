@@ -162,6 +162,7 @@
   "gen_bulk_scope_server": "Selected server",
   "gen_bulk_scope_city": "This city",
   "gen_bulk_scope_country": "This country",
+  "gen_bulk_scope_countries": "One per country",
   "gen_bulk_scope_all": "Every server",
   "gen_bulk_count": "configurations",
   "gen_bulk_note": "Every file in one download shares a key pair and a certificate: Proton issues a certificate for a key, not for a server.",
