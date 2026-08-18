@@ -403,14 +403,19 @@ export function unwrapCard(node) {
 /**
  * One collapsible section of the settings step.
  *
- * Built on `<details>` rather than on a click handler and a state flag: it
- * keeps its open state across the wizard's re-renders on its own, is operable
- * from the keyboard, and stays usable if the styles fail to load.
+ * Built on `<details>` rather than on a click handler and a state flag: it is
+ * operable from the keyboard and stays usable if the styles fail to load. The
+ * wizard re-renders by replacing the whole tree, which would recreate this
+ * element closed, so the open flag is handed in and every fold is reported
+ * back through `onToggle` for the next render to restore.
  *
  * @param summaryText Short read-out of the current choice, shown on the closed
  *   header so that nothing has to be opened just to see what is set.
+ * @param onToggle Called with the new open state when the visitor folds or
+ *   unfolds the section. Deliberately not a render trigger: the element has
+ *   already toggled itself, the state only matters to the next render.
  */
-export function accordion({ titleKey, summaryText = "", open = false, children = [] }) {
+export function accordion({ titleKey, summaryText = "", open = false, onToggle = null, children = [] }) {
 	const details = element("details", "card card-accordion")
 	details.open = open
 
@@ -424,6 +429,8 @@ export function accordion({ titleKey, summaryText = "", open = false, children =
 		if (child) body.append(child)
 	}
 	details.append(body)
+
+	if (onToggle) details.addEventListener("toggle", () => onToggle(details.open))
 
 	return details
 }

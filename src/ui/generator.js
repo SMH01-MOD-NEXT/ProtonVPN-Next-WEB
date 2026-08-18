@@ -138,6 +138,10 @@ export function mountGenerator(root) {
 		allowedIps: ALLOWED_IPS_ALL,
 		ipv6: true,
 		extendedCert: true,
+		// Which settings sections are unfolded. render() replaces the whole tree,
+		// so the accordions cannot keep this in the DOM: they report every toggle
+		// back here and the next render hands the flags back to them.
+		accordionOpen: { location: true, export: false, advanced: false },
 		configText: "",
 		configServer: null,
 		configFormat: "amneziawg",
@@ -682,7 +686,10 @@ export function mountGenerator(root) {
 			accordion({
 				titleKey: "gen_section_location",
 				summaryText: locationSummary(),
-				open: true,
+				open: state.accordionOpen.location,
+				onToggle: (open) => {
+					state.accordionOpen.location = open
+				},
 				children: [
 					unwrapCard(
 						countryPicker({
@@ -714,6 +721,10 @@ export function mountGenerator(root) {
 			accordion({
 				titleKey: "gen_section_export",
 				summaryText: exportSummary(),
+				open: state.accordionOpen.export,
+				onToggle: (open) => {
+					state.accordionOpen.export = open
+				},
 				children: [
 					unwrapCard(
 						formatCard({
@@ -741,6 +752,10 @@ export function mountGenerator(root) {
 			accordion({
 				titleKey: "gen_section_advanced",
 				summaryText: advancedSummary(),
+				open: state.accordionOpen.advanced,
+				onToggle: (open) => {
+					state.accordionOpen.advanced = open
+				},
 				children: [
 					unwrapCard(
 						obfuscationCard({
