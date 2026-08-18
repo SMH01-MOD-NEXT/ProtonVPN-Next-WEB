@@ -29,6 +29,12 @@ interface Env {
 	PVPN_QUOTA_SECRET?: string
 	/** Shared secret verifying the caller address the Vercel relay claims. */
 	PVPN_RELAY_SECRET?: string
+	/**
+	 * Sibling proxy retried when Proton blocks this deployment's egress with a
+	 * fake edge error. Defaults to the primary Deno deployment and fires only
+	 * when PVPN_RELAY_SECRET is set here and on the sibling.
+	 */
+	PVPN_RELAY_DENO_URL?: string
 }
 
 export default {
@@ -41,6 +47,8 @@ export default {
 				store: createWorkerStore(env),
 				secret: env.PVPN_QUOTA_SECRET ?? "",
 				relaySecret: env.PVPN_RELAY_SECRET ?? "",
+				relayUrl:
+					env.PVPN_RELAY_DENO_URL ?? "https://protonvpn-next-web--main.smh01-mirrors.deno.net/api",
 			})
 		}
 

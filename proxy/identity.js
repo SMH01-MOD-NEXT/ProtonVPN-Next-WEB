@@ -128,6 +128,15 @@ export async function readRelayAddress(header, secret) {
 }
 
 /**
+ * The producing half of `readRelayAddress`: the proof a relaying deployment
+ * sends as `<address>.<proof>` in `x-pvpn-relay`. It lives here so both halves
+ * of the scheme share one HMAC recipe.
+ */
+export async function relayProof(address, secret) {
+	return hmac(secret, address)
+}
+
+/**
  * The caller's address.
  *
  * `cf-connecting-ip` is set by Cloudflare and cannot be spoofed from outside;
