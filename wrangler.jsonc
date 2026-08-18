@@ -31,4 +31,12 @@
   //
   // The cookie signing secret is a plain secret, not a binding:
   // `wrangler secret put PVPN_QUOTA_SECRET`.
+  //
+  // Proton blackholes Cloudflare's egress when it decides to: currently a fake
+  // 525 with an "error code: 525" body, served only to requests carrying this
+  // zone's CF-Worker header. Setting `wrangler secret put PVPN_RELAY_SECRET` —
+  // the same value the Deno deployment has — lets the Worker retry blocked
+  // calls through the Deno sibling with the caller's signed address, so the
+  // sibling's quotas stay per visitor. `PVPN_RELAY_DENO_URL` overrides the
+  // relay target; the default is the primary Deno deployment.
 }

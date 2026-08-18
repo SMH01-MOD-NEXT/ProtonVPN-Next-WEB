@@ -14,9 +14,10 @@
  * a deployment does not run, and without a marker the only symptom is a CORS
  * error that looks identical to a code bug.
  */
-const PROXY_BUILD = "2026-08-17-relay-address"
+const PROXY_BUILD = "2026-08-18-relay-fallback"
 
 import { openQuotaGate } from "./quota.js"
+import { clientAddress, relayProof } from "./identity.js"
 
 /** Best-effort JSON store; see `store.js` for the backends behind it. */
 export interface QuotaStore {
@@ -34,6 +35,13 @@ export interface ProxyContext {
 	relaySecret?: string
 	/** Caller address for runtimes that do not put it in a header. */
 	address?: string
+	/**
+	 * Sibling proxy retried once when the direct upstream answers with a
+	 * Cloudflare edge error (521/522/523/525/526) — the shape Proton's egress
+	 * blackholing takes. Fires only together with relaySecret, which signs the
+	 * caller's address so the sibling's quotas stay per visitor.
+	 */
+	relayUrl?: string
 }
 
 /**
@@ -80,6 +88,15 @@ const UPSTREAMS: Array<{ prefix: string; host: string }> = [
 	{ prefix: "/verify", host: "https://verify.proton.me" },
 ]
 const DEFAULT_UPSTREAM = "https://vpn-api.proton.me"
+
+/**
+ * Cloudflare edge error statuses. Proton blackholes egress it distrusts by
+ * answering with one of these — currently a fake 525 carrying Cloudflare's
+ * compact "error code" body, served only to requests whose CF-Worker header
+ * names this deployment's zone — so anything in this range means "this
+ * network is being blocked", not "the API is down".
+ */
+const EDGE_ERROR_STATUSES = new Set([521, 522, 523, 525, 526])
 
 /**
  * Headers the browser must be allowed to read, on top of the safelisted ones.
@@ -199,6 +216,7 @@ export async function handleProxyRequest(
 				origin,
 				originAllowed: isAllowedOrigin(origin),
 				relayConfigured: Boolean(context?.relaySecret),
+				relayFallback: Boolean(context?.relayUrl && context?.relaySecret),
 			}),
 			{ status: 200, headers: { ...cors, "content-type": "application/json" } },
 		)
@@ -233,12 +251,16 @@ export async function handleProxyRequest(
 		if (value) headers.set(name, value)
 	}
 
+	// Read once: the relay retry below needs the same body, and a request body
+	// cannot be consumed twice.
+	const body = ["GET", "HEAD"].includes(request.method) ? undefined : await request.text()
+
 	let upstreamResponse: Response
 	try {
 		upstreamResponse = await fetch(target, {
 			method: request.method,
 			headers,
-			body: ["GET", "HEAD"].includes(request.method) ? undefined : await request.text(),
+			body,
 			redirect: "follow",
 		})
 	} catch (error) {
@@ -249,6 +271,38 @@ export async function handleProxyRequest(
 			status: 502,
 			headers: withGateHeaders(new Headers({ ...cors, "content-type": "application/json" })),
 		})
+	}
+
+	// An edge error means this deployment's egress is being blocked, not that
+	// the API is down: a configured sibling gets one retry from its own
+	// network. The signed relay header proves the caller's address, so the
+	// sibling counts the visitor rather than this deployment's address. The
+	// client cannot inject the header itself — it is not on the forwarded
+	// allowlist — and without the shared secret the honest edge error stands.
+	if (
+		context?.relayUrl &&
+		context.relaySecret &&
+		EDGE_ERROR_STATUSES.has(upstreamResponse.status)
+	) {
+		const address = clientAddress(request, context.address ?? "")
+		if (address) {
+			const relayHeaders = new Headers(headers)
+			relayHeaders.set(
+				"x-pvpn-relay",
+				`${address}.${await relayProof(address, context.relaySecret)}`,
+			)
+			try {
+				upstreamResponse = await fetch(`${context.relayUrl}${pathname}${incoming.search}`, {
+					method: request.method,
+					headers: relayHeaders,
+					body,
+					redirect: "follow",
+				})
+			} catch {
+				// An unreachable relay is no worse than the block that triggered it:
+				// the original edge error is the answer either way.
+			}
+		}
 	}
 
 	const responseHeaders = new Headers(cors)
@@ -264,10 +318,10 @@ export async function handleProxyRequest(
 	// Read as text rather than bytes: the quota gate has to look inside the
 	// payload to tell a real answer from a captcha challenge, and Proton always
 	// speaks JSON here.
-	const body = await upstreamResponse.text()
-	await gate.commit(upstreamResponse.status, body)
+	const responseBody = await upstreamResponse.text()
+	await gate.commit(upstreamResponse.status, responseBody)
 
-	return new Response(body, {
+	return new Response(responseBody, {
 		status: upstreamResponse.status,
 		headers: withGateHeaders(responseHeaders),
 	})
