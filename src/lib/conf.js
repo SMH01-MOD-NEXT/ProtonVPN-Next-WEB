@@ -48,7 +48,7 @@ export const DNS_PROFILES = [
 ]
 
 /** Ports Proton accepts for WireGuard; useful when 51820 is blocked. */
-export const AVAILABLE_PORTS = [51820, 443, 88, 1224, 4569, 5060, 80]
+export const AVAILABLE_PORTS = [51820, 443, 88, 1194, 1224, 4500, 4569, 5060, 5995, 80]
 
 /** Everything through the tunnel, both families. */
 export const ALLOWED_IPS_ALL = "0.0.0.0/0, ::/0"

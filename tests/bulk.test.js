@@ -37,6 +37,20 @@ test("a city scope stays inside its country", () => {
 	assert.equal(berlinInNetherlands.length, 0)
 })
 
+test("the countries scope keeps the fastest server of each country", () => {
+	const loaded = [
+		{ id: "nl-fast", name: "NL#1", exitCountry: "NL", city: "Amsterdam", entryIp: "1.1.1.1", publicKey: "a=", load: 12 },
+		{ id: "nl-slow", name: "NL#2", exitCountry: "NL", city: "Amsterdam", entryIp: "1.1.1.2", publicKey: "b=", load: 88 },
+		{ id: "de-mid", name: "DE#1", exitCountry: "DE", city: "Berlin", entryIp: "2.2.2.1", publicKey: "c=", load: 40 },
+	]
+
+	assert.deepEqual(
+		scopeServers({ servers: loaded, scope: "countries" }).map((entry) => entry.id),
+		["de-mid", "nl-fast"],
+	)
+	assert.equal(bundleFileName({ scope: "countries", format: "wiresock" }), "pvpn-next-countries-wiresock.zip")
+})
+
 test("one server needs no archive", () => {
 	const bundle = buildBundle({ servers: [servers[0]], format: "amneziawg", scope: "server", settings })
 
