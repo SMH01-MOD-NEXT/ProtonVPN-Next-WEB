@@ -162,6 +162,7 @@
   "gen_bulk_scope_server": "所选服务器",
   "gen_bulk_scope_city": "当前城市",
   "gen_bulk_scope_country": "当前国家/地区",
+  "gen_bulk_scope_countries": "每个国家/地区一个",
   "gen_bulk_scope_all": "全部服务器",
   "gen_bulk_count": "个配置",
   "gen_bulk_note": "同一次下载中的所有文件共用一对密钥和一份证书：Proton 的证书是按密钥签发的，而不是按服务器。",
