@@ -13,6 +13,7 @@
 
 import { t } from "../i18n/index.js"
 import { ADVANCED_GROUPS, OBFUSCATION_PRESETS, presetById } from "../lib/awg.js"
+import { cityLabel } from "../lib/cities.js"
 import { FASTEST_FLAG, flagImage } from "../lib/flags.js"
 import { ALLOWED_IPS_PRESETS, AVAILABLE_PORTS, DNS_PROFILES, allowedIpsPresetId } from "../lib/conf.js"
 import { serversByCountry } from "../lib/servers.js"
@@ -154,7 +155,7 @@ export function countryPicker({ servers, selected, onSelect }) {
 }
 
 /** Server rows, with "fastest" pinned on top exactly as the app pins it. */
-export function serverPicker({ servers, fastest, fastestId, selectedId, onSelect }) {
+export function serverPicker({ servers, fastest, fastestId, selectedId, cityNames = {}, onSelect }) {
 	const card = element("div", "card")
 	card.append(element("h3", "text-sm font-semibold text-white", t("gen_server")))
 
@@ -181,7 +182,11 @@ export function serverPicker({ servers, fastest, fastestId, selectedId, onSelect
 		const text = element("span", "server-text")
 		text.append(
 			element("span", "server-name", server.name),
-			element("span", "server-meta", [countryName(server.exitCountry), server.city].filter(Boolean).join(" \u00b7 ")),
+			element(
+				"span",
+				"server-meta",
+				[countryName(server.exitCountry), cityLabel(cityNames, server.exitCountry, server.city)].filter(Boolean).join(" \u00b7 "),
+			),
 		)
 
 		row.append(flagImage(server.exitCountry, "", "flag"), text, loadIndicator(server.load))
