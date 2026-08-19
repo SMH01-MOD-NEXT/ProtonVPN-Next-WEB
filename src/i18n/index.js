@@ -2,6 +2,7 @@ import en from "./en.json"
 import ru from "./ru.json"
 import uk from "./uk.json"
 import be from "./be.json"
+import kk from "./kk.json"
 import fa from "./fa.json"
 import zh from "./zh.json"
 
@@ -13,11 +14,12 @@ export const LANGUAGES = [
 	{ code: "ru", label: "\u0420\u0443\u0441\u0441\u043a\u0438\u0439", dir: "ltr" },
 	{ code: "uk", label: "\u0423\u043a\u0440\u0430\u0457\u043d\u0441\u044c\u043a\u0430", dir: "ltr" },
 	{ code: "be", label: "\u0411\u0435\u043b\u0430\u0440\u0443\u0441\u043a\u0430\u044f", dir: "ltr" },
+	{ code: "kk", label: "\u049a\u0430\u0437\u0430\u049b\u0448\u0430", dir: "ltr" },
 	{ code: "fa", label: "\u0641\u0627\u0631\u0633\u06cc", dir: "rtl" },
 	{ code: "zh", label: "\u4e2d\u6587", dir: "ltr" },
 ]
 
-const BUNDLES = { en, ru, uk, be, fa, zh }
+const BUNDLES = { en, ru, uk, be, kk, fa, zh }
 
 let currentLang = FALLBACK
 const listeners = new Set()
