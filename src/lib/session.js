@@ -11,16 +11,21 @@
  * the `.conf` file the visitor downloads, and it is what keeps the site from
  * asking Proton for a fresh certificate on every single download.
  *
+ * The refresh token rides along since v3: it is what lets the session renew
+ * itself instead of dying at the one-day mark. It stays scoped to this origin
+ * like the access token, and it rotates on every renewal — Proton hands out a
+ * new one with each fresh access token, so a stolen copy ages out quickly.
+ *
  * Everything lives in `localStorage` under one key and is rewritten as a whole,
  * so a partially written or hand-edited entry is discarded rather than merged.
  * The stored access token is a throwaway guest credential, but it is still a
  * credential: it is scoped to this origin, expires with the cache, and is wiped
- * as soon as Proton rejects it.
+ * as soon as Proton rejects it and the refresh token cannot revive it.
  */
 
-// Bumped from v1: entries now carry the key pair and certificate, and an older
-// entry has no way to supply them.
-const STORAGE_KEY = "pvpn-next.generator.session.v2"
+// Bumped from v2: entries now carry the refresh token. An older entry has no
+// way to renew itself, so it is simply left to be replaced at the next login.
+const STORAGE_KEY = "pvpn-next.generator.session.v3"
 
 /** Proton guest sessions outlive this comfortably; a day is the product choice. */
 export const CACHE_TTL_MS = 24 * 60 * 60 * 1000
@@ -45,6 +50,20 @@ function isSession(value) {
 		typeof value?.uid === "string" &&
 		value.uid.length > 0
 	)
+}
+
+/**
+ * The refresh token is optional: Proton has not always returned one for a
+ * credential-less session, and a cache without it still works — it just
+ * cannot renew itself when the access token dies.
+ */
+function normalizeSession(value) {
+	if (!isSession(value)) return null
+	return {
+		accessToken: value.accessToken,
+		uid: value.uid,
+		refreshToken: typeof value.refreshToken === "string" && value.refreshToken.length > 0 ? value.refreshToken : null,
+	}
 }
 
 /**
@@ -83,8 +102,10 @@ export function loadCachedSession(now = Date.now()) {
 
 	if (!parsed || typeof parsed !== "object") return null
 	if (typeof parsed.createdAt !== "number") return null
-	if (!isSession(parsed.session)) return null
 	if (!Array.isArray(parsed.servers)) return null
+
+	const session = normalizeSession(parsed.session)
+	if (!session) return null
 
 	if (now - parsed.createdAt >= CACHE_TTL_MS) {
 		clearCachedSession()
@@ -92,7 +113,7 @@ export function loadCachedSession(now = Date.now()) {
 	}
 
 	return {
-		session: parsed.session,
+		session,
 		profile: parsed.profile ?? null,
 		maxTier: typeof parsed.maxTier === "number" ? parsed.maxTier : 0,
 		servers: parsed.servers,
@@ -106,10 +127,11 @@ export function loadCachedSession(now = Date.now()) {
 /** Writes a freshly established session; resets the one-day clock. */
 export function saveCachedSession({ session, profile, maxTier, servers, credentials }, now = Date.now()) {
 	const store = storage()
-	if (!store || !isSession(session)) return null
+	const normalized = normalizeSession(session)
+	if (!store || !normalized) return null
 
 	const entry = {
-		session: { accessToken: session.accessToken, uid: session.uid },
+		session: normalized,
 		profile: profile ?? null,
 		maxTier: maxTier ?? 0,
 		servers: servers ?? [],
@@ -126,6 +148,41 @@ export function saveCachedSession({ session, profile, maxTier, servers, credenti
 	}
 
 	return { ...entry, expiresAt: now + CACHE_TTL_MS, loadsUpdatedAt: now }
+}
+
+/**
+ * Rewrites the entry with fresh tokens and restarts the one-day clock.
+ *
+ * Unlike `updateCachedServers`, renewing extends the cache on purpose: Proton
+ * accepted the refresh token, so the session is provably alive right now and
+ * the visitor has just earned another day of it. The server list, the
+ * credentials and the profile carry over untouched — a renewal changes the
+ * tokens, nothing else. When the answer carries no new refresh token, the old
+ * one is kept: Proton does not rotate it on every call.
+ */
+export function renewCachedSession(session, now = Date.now()) {
+	const store = storage()
+	const existing = loadCachedSession(now)
+	const normalized = normalizeSession(session)
+	if (!store || !existing || !normalized) return null
+
+	const entry = {
+		session: { ...normalized, refreshToken: normalized.refreshToken ?? existing.session.refreshToken },
+		profile: existing.profile,
+		maxTier: existing.maxTier,
+		servers: existing.servers,
+		credentials: existing.credentials,
+		createdAt: now,
+		loadsUpdatedAt: existing.loadsUpdatedAt,
+	}
+
+	try {
+		store.setItem(STORAGE_KEY, JSON.stringify(entry))
+	} catch {
+		return null
+	}
+
+	return { ...entry, expiresAt: now + CACHE_TTL_MS }
 }
 
 /**

@@ -5,6 +5,11 @@
  * upgrade that yields a usable VPN session. If Proton asks for human
  * verification the whole flow is retried with the next Android device profile,
  * which is why the site keeps a pool of them instead of a single hardcoded one.
+ *
+ * Sessions also renew: the refresh token handed out at login is exchanged for a
+ * fresh token pair at `/auth/v4/refresh`, the same call the CLI's
+ * `ProtonAuthApi.refresh_session` and the app's `SessionManager.refreshSession`
+ * make. No device challenge is involved, so renewal never rotates profiles.
  */
 
 import { apiCall, ApiError, ProxyUnreachableError } from "./api.js"
@@ -50,7 +55,7 @@ async function upgradeToCredentialless(profile, session, signal) {
  *
  * @param onProgress called with `{ stage, profile, attempt, total }` so the UI
  *   can show which device profile is being used, including silent retries.
- * @returns {Promise<{accessToken: string, uid: string, profile: object}>}
+ * @returns {Promise<{accessToken: string, uid: string, refreshToken: string|null, profile: object}>}
  */
 export async function loginAsGuest({ onProgress = () => {}, signal } = {}) {
 	const profiles = profileRotation()
@@ -85,4 +90,40 @@ export async function loginAsGuest({ onProgress = () => {}, signal } = {}) {
 	}
 
 	throw new VerificationExhaustedError(attempts)
+}
+
+/**
+ * Trades the refresh token for a fresh token pair.
+ *
+ * The refresh grant authenticates with the refresh token in the body and the
+ * session UID in the header; the access token is not sent, because the whole
+ * point is that it may already be rejected. Proton answers with a new access
+ * token and usually a new refresh token — when it does not rotate, the old
+ * refresh token is kept, exactly as the CLI does.
+ *
+ * @returns {Promise<{accessToken: string, uid: string, refreshToken: string|null}>}
+ */
+export async function refreshSession({ profile, session, signal }) {
+	if (typeof session?.refreshToken !== "string" || session.refreshToken.length === 0) {
+		throw new Error("Cannot renew a session without a refresh token")
+	}
+
+	const payload = await apiCall("/auth/v4/refresh", {
+		method: "POST",
+		profile,
+		session: { uid: session.uid },
+		body: {
+			ResponseType: "token",
+			GrantType: "refresh_token",
+			RefreshToken: session.refreshToken,
+			RedirectURI: "https://protonvpn.com",
+		},
+		signal,
+	})
+
+	return {
+		accessToken: payload.AccessToken ?? session.accessToken,
+		uid: payload.UID ?? session.uid,
+		refreshToken: payload.RefreshToken ?? session.refreshToken,
+	}
 }
