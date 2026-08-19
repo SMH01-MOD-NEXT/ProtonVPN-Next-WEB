@@ -8,6 +8,7 @@
 
 import { t } from "../i18n/index.js"
 import { BULK_SCOPES } from "../lib/bulk.js"
+import { cityLabel } from "../lib/cities.js"
 import { CLIENT_FORMATS, SNI_DOMAINS, WIRESOCK_BROWSERS, WIRESOCK_PROTOCOLS } from "../lib/formats.js"
 import { citiesOf } from "../lib/servers.js"
 import { button, element, labelledField } from "./generator-view.js"
@@ -102,18 +103,32 @@ export function formatCard({ format, sniDomain, sniProtocol, sniBrowser, handler
  * Proton runs several servers per city, so this is the filter that turns "the
  * Netherlands" into "Amsterdam". It renders nothing when the selection holds a
  * single city, where the choice would be meaningless.
+ *
+ * The chip values stay English — they are what the server list is filtered by —
+ * but the labels follow the interface language through `cityNames`, and the
+ * chips are sorted by those labels so the order reads alphabetically in the
+ * visitor's language rather than in English.
  */
-export function cityPicker({ servers, city, onSelect }) {
+export function cityPicker({ servers, city, cityNames = {}, onSelect }) {
 	const cities = citiesOf(servers)
 	if (cities.length < 2) return null
+
+	// A city's translation is keyed by its country, which the bare name loses;
+	// the first server carrying the name lends it. The same English name in two
+	// countries translates the same in practice, so a first match is enough.
+	const countryByCity = new Map()
+	for (const server of servers) {
+		if (server.city && !countryByCity.has(server.city)) countryByCity.set(server.city, server.exitCountry)
+	}
 
 	const card = element("div", "card")
 	card.append(element("h3", "text-sm font-semibold text-white", t("gen_city")))
 
-	const items = [
-		{ id: ALL_CITIES, label: t("gen_city_all") },
-		...cities.map((name) => ({ id: name, label: name })),
-	]
+	const localized = cities
+		.map((name) => ({ id: name, label: cityLabel(cityNames, countryByCity.get(name), name) }))
+		.sort((first, second) => first.label.localeCompare(second.label, document.documentElement.lang))
+
+	const items = [{ id: ALL_CITIES, label: t("gen_city_all") }, ...localized]
 	const row = chipRow(items, city, onSelect)
 	row.classList.add("mt-4")
 	card.append(row)

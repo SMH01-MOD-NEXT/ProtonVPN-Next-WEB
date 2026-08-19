@@ -32,12 +32,13 @@ const {
 	hoursRemaining,
 	loadCachedSession,
 	loadsAreStale,
+	renewCachedSession,
 	saveCachedSession,
 	updateCachedServers,
 } = await import("../src/lib/session.js")
 
 const SAMPLE = {
-	session: { accessToken: "token", uid: "uid" },
+	session: { accessToken: "token", uid: "uid", refreshToken: "refresh" },
 	profile: { id: "pixel8", model: "Pixel 8" },
 	maxTier: 0,
 	servers: [{ id: "a", name: "NL-FREE#1", exitCountry: "NL", load: 12 }],
@@ -51,9 +52,18 @@ test("a saved session comes back with everything needed to skip the login", () =
 	const cache = loadCachedSession(1_000)
 
 	assert.equal(cache.session.accessToken, "token")
+	assert.equal(cache.session.refreshToken, "refresh")
 	assert.equal(cache.profile.id, "pixel8")
 	assert.equal(cache.maxTier, 0)
 	assert.equal(cache.servers.length, 1)
+})
+
+test("a session without a refresh token still caches, it just cannot renew", () => {
+	saveCachedSession({ ...SAMPLE, session: { accessToken: "token", uid: "uid" } }, 1_000)
+
+	const cache = loadCachedSession(1_000)
+	assert.equal(cache.session.accessToken, "token")
+	assert.equal(cache.session.refreshToken, null)
 })
 
 test("the cache survives right up to the day mark and not past it", () => {
@@ -86,6 +96,50 @@ test("refreshed servers do not extend the day the session was granted", () => {
 
 	assert.equal(updated.servers.length, 2)
 	assert.equal(loadCachedSession(DAY + 1_000), null, "still expires a day after login")
+})
+
+test("a renewal swaps the tokens and restarts the one-day clock", () => {
+	saveCachedSession(SAMPLE, 0)
+
+	const renewed = renewCachedSession({ accessToken: "token2", uid: "uid", refreshToken: "refresh2" }, DAY / 2)
+
+	assert.equal(renewed.session.accessToken, "token2")
+	assert.equal(renewed.session.refreshToken, "refresh2")
+	assert.equal(hoursRemaining(renewed, DAY / 2), 24, "a full day again")
+
+	// The day now counts from the renewal, not from the original login.
+	assert.ok(loadCachedSession(DAY + HOUR), "alive past the original deadline")
+	assert.equal(loadCachedSession(DAY / 2 + DAY + 1_000), null, "gone a day after the renewal")
+})
+
+test("a renewal keeps the old refresh token when Proton does not rotate it", () => {
+	saveCachedSession(SAMPLE, 0)
+
+	const renewed = renewCachedSession({ accessToken: "token2", uid: "uid", refreshToken: null }, HOUR)
+
+	assert.equal(renewed.session.accessToken, "token2")
+	assert.equal(renewed.session.refreshToken, "refresh")
+})
+
+test("a renewal keeps the servers and credentials it knows nothing about", () => {
+	const credentials = {
+		wireGuardPrivateKey: "private",
+		publicKeyPem: "pem",
+		certificate: "cert",
+	}
+	saveCachedSession({ ...SAMPLE, credentials }, 0)
+
+	const renewed = renewCachedSession({ accessToken: "token2", uid: "uid", refreshToken: "refresh2" }, HOUR)
+
+	assert.equal(renewed.servers.length, 1)
+	assert.equal(renewed.credentials.certificate, "cert")
+})
+
+test("renewing without an existing cache writes nothing", () => {
+	const result = renewCachedSession({ accessToken: "t", uid: "u", refreshToken: "r" }, 0)
+
+	assert.equal(result, null)
+	assert.equal(storage.getItem(STORAGE_KEY), null)
 })
 
 test("load figures go stale long before the session does", () => {

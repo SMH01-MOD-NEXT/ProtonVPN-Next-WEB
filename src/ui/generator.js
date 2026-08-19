@@ -8,7 +8,11 @@
  *
  * The session, the server list, the tier and the VPN credentials are cached for
  * a day (`lib/session.js`), so the usual flow is to log in once and then produce
- * as many configurations as wanted without another call to Proton.
+ * as many configurations as wanted without another call to Proton. A session
+ * carrying a refresh token also renews itself (`lib/auth.js`): the renewal
+ * restarts the cache's one-day clock, so a visitor who comes back at least
+ * once a day never has to log in again, and a rejected access token is
+ * refreshed and retried once instead of ending the session.
  *
  * The certificate is issued once, right after the guest session is upgraded,
  * and reused by every configuration afterwards. That is not a shortcut: Proton
@@ -16,16 +20,21 @@
  * certificate covers every server, and asking for a new one per download only
  * burned the account's rate limit for no benefit.
  *
+ * City names follow the interface language (`lib/cities.js`), fetched from
+ * Proton the same way the app does it; a failed fetch simply leaves the
+ * English names the server list already carries.
+ *
  * Rendering lives in `generator-view.js` and `generator-export.js`.
  */
 
-import { t, onLanguageChange } from "../i18n/index.js"
+import { t, getLanguage, onLanguageChange } from "../i18n/index.js"
 import { ApiError, ProxyUnreachableError } from "../lib/api.js"
-import { loginAsGuest, VerificationExhaustedError } from "../lib/auth.js"
+import { loginAsGuest, refreshSession, VerificationExhaustedError } from "../lib/auth.js"
 import { Ed25519UnsupportedError, generateVpnKeys } from "../lib/crypto.js"
 import { registerCertificate } from "../lib/cert.js"
 import { advancedFromPreset, generateHeaderProtectionKey, nextI1, presetById } from "../lib/awg.js"
 import { DomainI1UnsupportedError, generateI1FromDomain } from "../lib/quic.js"
+import { cityLabel, fetchCityNames, loadCachedCities, localeFor, saveCachedCities } from "../lib/cities.js"
 import {
 	ALLOWED_IPS_ALL,
 	ALLOWED_IPS_PRESETS,
@@ -52,6 +61,7 @@ import {
 	hoursRemaining,
 	loadCachedSession,
 	loadsAreStale,
+	renewCachedSession,
 	saveCachedSession,
 	updateCachedServers,
 } from "../lib/session.js"
@@ -98,8 +108,10 @@ function errorKeyFor(error) {
 
 /**
  * A cached session eventually stops being accepted, either because it expired
- * early or because Proton dropped it. That is not a real failure: the cache is
- * cleared and the visitor is sent back to the login step.
+ * early or because Proton dropped it. That is not necessarily the end: with a
+ * refresh token on hand the session is renewed and the call retried once, the
+ * app's TokenAuthenticator flow. Only a renewal that is rejected too sends
+ * the visitor back to the login step.
  */
 function isSessionRejected(error) {
 	return error instanceof ApiError && (error.status === 401 || error.code === 401)
@@ -119,6 +131,9 @@ export function mountGenerator(root) {
 		// Key pair plus the certificate issued for it, shared by every config in
 		// this session and restored from the cache on a return visit.
 		credentials: null,
+		// Country -> English city name -> localized name, for the pickers. Empty
+		// object means the English names from the server list are used as-is.
+		cityNames: {},
 		country: ALL_COUNTRIES,
 		city: ALL_CITIES,
 		serverId: FASTEST_ID,
@@ -152,6 +167,56 @@ export function mountGenerator(root) {
 
 	/* ---------- session ---------- */
 
+	// Every renewal goes through this one promise, so a burst of calls — the
+	// keep-alive on restore, a 401 retry, a language change — shares a single
+	// token exchange, the job the app's SessionManager mutex does.
+	let renewalInFlight = null
+
+	/**
+	 * Trades the refresh token for a fresh token pair and restarts the cache's
+	 * one-day clock.
+	 *
+	 * Resolves true when the session is usable with the new tokens. A rejected
+	 * renewal means Proton forgot the session entirely, which is the one case
+	 * that drops it; anything else (proxy down, network gone) keeps the cached
+	 * session, which may still be accepted.
+	 */
+	function renewSession() {
+		if (!state.session?.refreshToken) return Promise.resolve(false)
+
+		renewalInFlight ??= (async () => {
+			try {
+				const tokens = await refreshSession({ profile: state.profile, session: state.session })
+				state.session = { ...state.session, ...tokens }
+				state.cache = renewCachedSession(state.session) ?? state.cache
+				return true
+			} catch (error) {
+				if (isSessionRejected(error)) dropSession()
+				return false
+			} finally {
+				renewalInFlight = null
+			}
+		})()
+
+		return renewalInFlight
+	}
+
+	/**
+	 * Runs an API operation, renewing the session and retrying once when Proton
+	 * answers 401. The callback reads `state.session` at call time, so the
+	 * retry picks up the fresh pair. A renewal that fails rethrows the
+	 * original rejection, which `fail()` maps to the login step.
+	 */
+	async function withSessionRenewal(operation) {
+		try {
+			return await operation()
+		} catch (error) {
+			if (!isSessionRejected(error) || !state.session?.refreshToken) throw error
+			if (!(await renewSession())) throw error
+			return operation()
+		}
+	}
+
 	function restoreCachedSession() {
 		const cache = loadCachedSession()
 		if (!cache) return
@@ -164,9 +229,17 @@ export function mountGenerator(root) {
 		state.credentials = cache.credentials
 		state.step = "settings"
 
+		// The keep-alive, as the app's SessionRefreshWorker does it: a working
+		// refresh token turns the visit into another full day of cache. A
+		// rejected renewal drops the session, which the next render shows.
+		renewSession().then((renewed) => {
+			if (renewed || !state.session) render()
+		})
+
 		// Load figures age far faster than the session, so a returning visitor
 		// quietly gets fresh numbers instead of yesterday's.
 		if (loadsAreStale(cache)) refreshServers({ quiet: true })
+		loadCityNames()
 	}
 
 	function dropSession() {
@@ -176,6 +249,7 @@ export function mountGenerator(root) {
 		state.profile = null
 		state.servers = []
 		state.credentials = null
+		state.cityNames = {}
 		state.maxTier = TIER_FREE
 		state.step = "login"
 	}
@@ -209,7 +283,11 @@ export function mountGenerator(root) {
 				},
 			})
 
-			state.session = { accessToken: session.accessToken, uid: session.uid }
+			state.session = {
+				accessToken: session.accessToken,
+				uid: session.uid,
+				refreshToken: session.refreshToken ?? null,
+			}
 			state.profile = session.profile
 			state.progressKey = PROGRESS_KEYS.servers
 			render()
@@ -240,6 +318,7 @@ export function mountGenerator(root) {
 			state.busy = false
 			state.progressKey = null
 			render()
+			loadCityNames()
 		} catch (error) {
 			fail(error)
 		}
@@ -255,8 +334,10 @@ export function mountGenerator(root) {
 		}
 
 		try {
-			const context = { profile: state.profile, session: state.session }
-			const [logicals, loads] = await Promise.all([fetchServers(context), fetchLoads(context)])
+			const [logicals, loads] = await withSessionRenewal(() => {
+				const context = { profile: state.profile, session: state.session }
+				return Promise.all([fetchServers(context), fetchLoads(context)])
+			})
 
 			state.servers = prepareServers(logicals, loads, state.maxTier)
 			state.cache = updateCachedServers(state.servers) ?? state.cache
@@ -268,6 +349,54 @@ export function mountGenerator(root) {
 			if (quiet && !isSessionRejected(error)) return
 			fail(error)
 		}
+	}
+
+	/* ---------- city names ---------- */
+
+	/**
+	 * City names in the interface language, from the same endpoint the app
+	 * uses. English skips the call entirely — the server list is already in
+	 * English — and any failure is quiet: the pickers just keep those names.
+	 */
+	async function loadCityNames() {
+		if (!state.session) return
+
+		const language = getLanguage()
+		if (language === "en") {
+			if (Object.keys(state.cityNames).length > 0) {
+				state.cityNames = {}
+				render()
+			}
+			return
+		}
+
+		const locale = localeFor(language)
+		const cached = loadCachedCities(locale)
+		if (cached) {
+			state.cityNames = cached
+			render()
+			return
+		}
+
+		try {
+			const cities = await withSessionRenewal(() =>
+				fetchCityNames({ profile: state.profile, session: state.session, locale }),
+			)
+			// The language may have changed while the call was in flight.
+			if (getLanguage() !== language) return
+			state.cityNames = cities
+			saveCachedCities(locale, cities)
+			render()
+		} catch (error) {
+			// A rejected session is not cosmetic: handle it like everywhere else.
+			if (isSessionRejected(error)) fail(error)
+			/* Anything else: the English names stay. */
+		}
+	}
+
+	/** Localized label for one city, English when there is no translation. */
+	function translateCity(countryCode, englishName) {
+		return cityLabel(state.cityNames, countryCode, englishName)
 	}
 
 	/* ---------- selection ---------- */
@@ -450,12 +579,14 @@ export function mountGenerator(root) {
 		state.progressKey = PROGRESS_KEYS.cert
 		render()
 
-		const certificate = await registerCertificate({
-			profile: state.profile,
-			session: state.session,
-			publicKeyPem: keys.publicKeyPem,
-			extended: state.extendedCert,
-		})
+		const certificate = await withSessionRenewal(() =>
+			registerCertificate({
+				profile: state.profile,
+				session: state.session,
+				publicKeyPem: keys.publicKeyPem,
+				extended: state.extendedCert,
+			}),
+		)
 
 		return {
 			wireGuardPrivateKey: keys.wireGuardPrivateKey,
@@ -575,8 +706,8 @@ export function mountGenerator(root) {
 	// session only meant asking Proton for a new one, and the server-side quota
 	// allows one of those per day: a visitor who pressed it twice locked
 	// themselves out of a session they already had. The session is dropped
-	// automatically when Proton stops accepting it, which is the only case that
-	// ever needed it.
+	// automatically when Proton stops accepting it and the refresh token cannot
+	// renew it, which is the only case that ever needed it.
 
 	/* ---------- steps ---------- */
 
@@ -638,7 +769,7 @@ export function mountGenerator(root) {
 		const server = selectedServer()
 		if (!server) return t("gen_no_servers")
 
-		const place = [countryName(server.exitCountry), server.city].filter(Boolean).join(" \u00b7 ")
+		const place = [countryName(server.exitCountry), translateCity(server.exitCountry, server.city)].filter(Boolean).join(" \u00b7 ")
 		const prefix = state.serverId === FASTEST_ID ? `${t("gen_fastest")}: ` : ""
 		return `${prefix}${server.name} \u00b7 ${place}`
 	}
@@ -674,6 +805,7 @@ export function mountGenerator(root) {
 		const cities = cityPicker({
 			servers: countryServers(),
 			city: state.city,
+			cityNames: state.cityNames,
 			onSelect: (city) => {
 				state.city = city
 				state.serverId = FASTEST_ID
@@ -710,6 +842,7 @@ export function mountGenerator(root) {
 							fastest: fastestServer(candidates),
 							fastestId: FASTEST_ID,
 							selectedId: state.serverId,
+							cityNames: state.cityNames,
 							onSelect: (id) => {
 								state.serverId = id
 								render()
@@ -868,5 +1001,8 @@ export function mountGenerator(root) {
 
 	restoreCachedSession()
 	render()
-	onLanguageChange(render)
+	onLanguageChange(() => {
+		render()
+		loadCityNames()
+	})
 }
