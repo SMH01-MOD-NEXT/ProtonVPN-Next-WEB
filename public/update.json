@@ -1,31 +1,31 @@
 {
   "nightly": {
     "debug": {
-      "versionCode": 605160350,
-      "versionName": "12.0.0-alpha2st3-14-gb2dd464-nightly",
+      "versionCode": 605160353,
+      "versionName": "12.0.0-alpha2st3-17-g3fd3589-nightly",
       "url": "https://r2.protonnext.qzz.io/VPN-Next-TEST/app-nightly-standard-debug.apk",
-      "changelog": "chore: update amnezia-box to 1.14.0-rc.1-awgm.14\n\nBump the pinned AWGBox core from 1.14.0-beta.4-awgm.5 to 1.14.0-rc.1-awgm.14 (commit 34da3ebcda89b74ddab690ce36ad495927fb7a97).\n\n- rebase the Tor Android hardening patch onto the rewritten upstream protocol/tor/outbound.go (proxybridge upstream proxy, reworked executable_path handling); bootstrap wait and the app-private unix SOCKS socket are unchanged\\n- implement PlatformInterface.cancelNotification, added by libbox 1.14\\n- refresh the AWGBox architecture doc and third-party notice",
+      "changelog": "fix: build AWGBox with supported Go toolchain",
       "force": false
     },
     "release": {
-      "versionCode": 605160350,
-      "versionName": "12.0.0-alpha2st3-14-gb2dd464-nightly",
+      "versionCode": 605160353,
+      "versionName": "12.0.0-alpha2st3-17-g3fd3589-nightly",
       "url": "https://r2.protonnext.qzz.io/VPN-Next-TEST/app-nightly-standard-release.apk",
-      "changelog": "chore: update amnezia-box to 1.14.0-rc.1-awgm.14\n\nBump the pinned AWGBox core from 1.14.0-beta.4-awgm.5 to 1.14.0-rc.1-awgm.14 (commit 34da3ebcda89b74ddab690ce36ad495927fb7a97).\n\n- rebase the Tor Android hardening patch onto the rewritten upstream protocol/tor/outbound.go (proxybridge upstream proxy, reworked executable_path handling); bootstrap wait and the app-private unix SOCKS socket are unchanged\\n- implement PlatformInterface.cancelNotification, added by libbox 1.14\\n- refresh the AWGBox architecture doc and third-party notice",
+      "changelog": "fix: build AWGBox with supported Go toolchain",
       "force": false
     },
     "privacyDebug": {
-      "versionCode": 605160350,
-      "versionName": "12.0.0-alpha2st3-14-gb2dd464-nightly",
+      "versionCode": 605160353,
+      "versionName": "12.0.0-alpha2st3-17-g3fd3589-nightly",
       "url": "https://r2.protonnext.qzz.io/VPN-Next-TEST/app-nightly-privacy-debug.apk",
-      "changelog": "chore: update amnezia-box to 1.14.0-rc.1-awgm.14\n\nBump the pinned AWGBox core from 1.14.0-beta.4-awgm.5 to 1.14.0-rc.1-awgm.14 (commit 34da3ebcda89b74ddab690ce36ad495927fb7a97).\n\n- rebase the Tor Android hardening patch onto the rewritten upstream protocol/tor/outbound.go (proxybridge upstream proxy, reworked executable_path handling); bootstrap wait and the app-private unix SOCKS socket are unchanged\\n- implement PlatformInterface.cancelNotification, added by libbox 1.14\\n- refresh the AWGBox architecture doc and third-party notice",
+      "changelog": "fix: build AWGBox with supported Go toolchain",
       "force": false
     },
     "privacyRelease": {
-      "versionCode": 605160350,
-      "versionName": "12.0.0-alpha2st3-14-gb2dd464-nightly",
+      "versionCode": 605160353,
+      "versionName": "12.0.0-alpha2st3-17-g3fd3589-nightly",
       "url": "https://r2.protonnext.qzz.io/VPN-Next-TEST/app-nightly-privacy-release.apk",
-      "changelog": "chore: update amnezia-box to 1.14.0-rc.1-awgm.14\n\nBump the pinned AWGBox core from 1.14.0-beta.4-awgm.5 to 1.14.0-rc.1-awgm.14 (commit 34da3ebcda89b74ddab690ce36ad495927fb7a97).\n\n- rebase the Tor Android hardening patch onto the rewritten upstream protocol/tor/outbound.go (proxybridge upstream proxy, reworked executable_path handling); bootstrap wait and the app-private unix SOCKS socket are unchanged\\n- implement PlatformInterface.cancelNotification, added by libbox 1.14\\n- refresh the AWGBox architecture doc and third-party notice",
+      "changelog": "fix: build AWGBox with supported Go toolchain",
       "force": false
     }
   },
