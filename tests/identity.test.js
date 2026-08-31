@@ -5,6 +5,7 @@ import {
 	addressIdentity,
 	clientAddress,
 	issueCookie,
+	normaliseAddress,
 	parseCookies,
 	readSignedCookie,
 	resolveIdentity,
@@ -69,6 +70,53 @@ test("the address comes from the header the platform controls", () => {
 test("Cloudflare's header wins over one the caller can set", () => {
 	const spoofed = request({ "cf-connecting-ip": "203.0.113.7", "x-forwarded-for": "198.51.100.1" })
 	assert.equal(clientAddress(spoofed), "203.0.113.7")
+})
+
+test("one address has one spelling, whatever the host reports", () => {
+	// Deno hands over the connection address, and on a dual-stack listener an
+	// IPv4 caller arrives mapped into IPv6.
+	assert.equal(normaliseAddress("::ffff:203.0.113.7"), "203.0.113.7")
+	assert.equal(normaliseAddress("::FFFF:203.0.113.7"), "203.0.113.7")
+	// Brackets and a source port are the host describing a connection, not part
+	// of the address.
+	assert.equal(normaliseAddress("[2001:db8::1]:443"), "2001:db8::1")
+	assert.equal(normaliseAddress("203.0.113.7:51234"), "203.0.113.7")
+	assert.equal(normaliseAddress("  203.0.113.7  "), "203.0.113.7")
+	// A bare IPv6 is nothing but colons and must not be read as host:port.
+	assert.equal(normaliseAddress("2001:db8::1"), "2001:db8::1")
+	assert.equal(normaliseAddress("::1"), "::1")
+	assert.equal(normaliseAddress(""), "")
+	assert.equal(normaliseAddress(undefined), "")
+})
+
+test("normalising an address twice changes nothing", () => {
+	for (const raw of ["::ffff:203.0.113.7", "[2001:db8::1]:443", "203.0.113.7", "::1", ""]) {
+		assert.equal(normaliseAddress(normaliseAddress(raw)), normaliseAddress(raw))
+	}
+})
+
+test("the Deno connection address is echoed in the shape Cloudflare uses", () => {
+	// The bug this covers: one caller read `203.0.113.7` on Cloudflare and
+	// `::ffff:203.0.113.7` on Deno, so the address the page showed changed
+	// shape depending on which deployment answered.
+	assert.equal(clientAddress(request(), "::ffff:203.0.113.7"), "203.0.113.7")
+	assert.equal(clientAddress(request({ "x-real-ip": "::ffff:203.0.113.7" })), "203.0.113.7")
+	assert.equal(
+		clientAddress(request({ "x-forwarded-for": "::ffff:203.0.113.7, 70.41.3.18" })),
+		"203.0.113.7",
+	)
+})
+
+test("one visitor counts against one quota bucket on every deployment", async () => {
+	// Cloudflare reports the plain address and Deno the mapped one. Hashing
+	// those apart would hand one visitor a second allowance for changing mirror.
+	const viaCloudflare = await addressIdentity(
+		clientAddress(request({ "cf-connecting-ip": "203.0.113.7" })),
+		SECRET,
+	)
+	const viaDeno = await addressIdentity(clientAddress(request(), "::ffff:203.0.113.7"), SECRET)
+
+	assert.equal(viaCloudflare, viaDeno)
 })
 
 test("the store never holds a raw address", async () => {
