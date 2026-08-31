@@ -59,6 +59,11 @@
 						data-t="nav_generator"
 					></a>
 					<a
+						href="#ipcheck"
+						class="rounded-lg px-3 py-2 text-sm text-slate-300 hover:bg-white/5 hover:text-white"
+						data-t="nav_ipcheck"
+					></a>
+					<a
 						href="#about"
 						class="rounded-lg px-3 py-2 text-sm text-slate-300 hover:bg-white/5 hover:text-white"
 						data-t="nav_about"
@@ -242,6 +247,16 @@
 					<h2 class="section-title" data-t="gen_title"></h2>
 					<p class="section-subtitle" data-t="gen_subtitle"></p>
 					<div id="generator-root" class="mt-10"></div>
+				</div>
+			</section>
+
+			<!-- IP and country check -->
+			<section id="ipcheck" class="section">
+				<div class="container-page">
+					<h2 class="section-title" data-t="ip_title"></h2>
+					<p class="section-subtitle" data-t="ip_subtitle"></p>
+					<!-- The panel and its privacy note are rendered by the ip-check module. -->
+					<div id="ipcheck-root" class="mt-10"></div>
 				</div>
 			</section>
 

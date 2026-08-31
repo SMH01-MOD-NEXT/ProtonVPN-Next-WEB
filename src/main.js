@@ -9,6 +9,7 @@ import {
 import { installDiagnostics } from "./lib/diagnostics.js"
 import { mountDownloads } from "./ui/downloads.js"
 import { mountGenerator } from "./ui/generator.js"
+import { mountIpCheck } from "./ui/ip-check.js"
 
 function setupLanguageSwitcher() {
 	const select = document.querySelector("#lang-select")
@@ -37,6 +38,9 @@ function start() {
 
 	const generatorRoot = document.querySelector("#generator-root")
 	if (generatorRoot) mountGenerator(generatorRoot)
+
+	const ipCheckRoot = document.querySelector("#ipcheck-root")
+	if (ipCheckRoot) mountIpCheck(ipCheckRoot)
 }
 
 if (document.readyState === "loading") {
