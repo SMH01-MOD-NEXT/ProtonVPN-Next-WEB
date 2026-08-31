@@ -163,12 +163,41 @@ function requestedPath(url: URL, req: any): string {
   return stripApiPrefix(url.pathname)
 }
 
+/**
+ * One spelling per address, matching `normaliseAddress` in `proxy/identity.js`.
+ *
+ * Kept local rather than imported because this function deploys on its own,
+ * the way `relayProof` below already does. Hosts disagree about how to write
+ * the same caller: an IPv4 client can arrive mapped into IPv6 as
+ * `::ffff:1.2.3.4`, bracketed, or with its source port attached, and every one
+ * of those is the same visitor.
+ */
+function normaliseAddress(value: unknown): string {
+  let address = String(value ?? "").trim()
+  if (!address) return ""
+
+  // `[2001:db8::1]:443` -> `2001:db8::1`
+  const bracketed = address.match(/^\[(.+)\](?::\d+)?$/)
+  if (bracketed) address = bracketed[1]
+
+  // Matched on the dotted quad alone, so a bare IPv6 — nothing but colons — is
+  // never read as a host:port pair.
+  const withPort = address.match(/^(\d{1,3}(?:\.\d{1,3}){3}):\d+$/)
+  if (withPort) address = withPort[1]
+
+  // `::ffff:1.2.3.4` -> `1.2.3.4`
+  const mapped = address.match(/^::ffff:(\d{1,3}(?:\.\d{1,3}){3})$/i)
+  if (mapped) address = mapped[1]
+
+  return address
+}
+
 /** The visitor's address as Vercel reports it to the function. */
 function callerAddress(req: any): string {
   const realIp = req.headers?.["x-real-ip"]
-  if (typeof realIp === "string" && realIp.trim()) return realIp.trim()
+  if (typeof realIp === "string" && realIp.trim()) return normaliseAddress(realIp)
   const forwarded = req.headers?.["x-forwarded-for"]
-  if (typeof forwarded === "string" && forwarded) return forwarded.split(",")[0].trim()
+  if (typeof forwarded === "string" && forwarded) return normaliseAddress(forwarded.split(",")[0])
   return ""
 }
 

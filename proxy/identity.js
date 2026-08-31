@@ -137,20 +137,55 @@ export async function relayProof(address, secret) {
 }
 
 /**
+ * One spelling per address.
+ *
+ * Hosts disagree about how to write the same caller. Deno hands over the
+ * connection address, and on a dual-stack listener an IPv4 caller arrives in
+ * the mapped form `::ffff:1.2.3.4`, while Cloudflare reports a plain
+ * `1.2.3.4`. Some hosts also bracket an IPv6 literal or append the source
+ * port. All of those are the same visitor and must reduce to one string.
+ */
+export function normaliseAddress(value) {
+	let address = String(value ?? "").trim()
+	if (!address) return ""
+
+	// `[2001:db8::1]:443` -> `2001:db8::1`
+	const bracketed = address.match(/^\[(.+)\](?::\d+)?$/)
+	if (bracketed) address = bracketed[1]
+
+	// `1.2.3.4:443` -> `1.2.3.4`. Matched on the dotted quad alone, so a bare
+	// IPv6, which is nothing but colons, is never read as a host:port pair.
+	const withPort = address.match(/^(\d{1,3}(?:\.\d{1,3}){3}):\d+$/)
+	if (withPort) address = withPort[1]
+
+	// `::ffff:1.2.3.4` -> `1.2.3.4`
+	const mapped = address.match(/^::ffff:(\d{1,3}(?:\.\d{1,3}){3})$/i)
+	if (mapped) address = mapped[1]
+
+	return address
+}
+
+/**
  * The caller's address.
  *
  * `cf-connecting-ip` is set by Cloudflare and cannot be spoofed from outside;
  * the others are checked for the Deno deployment and for local development.
  * A forwarded chain lists the client first, so only the first entry is used.
+ *
+ * Every source goes through `normaliseAddress`, because the quota counts a
+ * hash of whatever this returns: two spellings of one caller would be two
+ * buckets, so a visitor would collect a fresh allowance simply by landing on
+ * a different deployment. It also stops the address echoed back to the page
+ * from changing shape for no reason its reader can see.
  */
 export function clientAddress(request, fallback = "") {
 	const direct = request.headers.get("cf-connecting-ip") ?? request.headers.get("x-real-ip")
-	if (direct) return direct.trim()
+	if (direct) return normaliseAddress(direct)
 
 	const forwarded = request.headers.get("x-forwarded-for")
-	if (forwarded) return forwarded.split(",")[0].trim()
+	if (forwarded) return normaliseAddress(forwarded.split(",")[0])
 
-	return fallback
+	return normaliseAddress(fallback)
 }
 
 /** Hashed address, so the quota store never holds a raw IP. */
@@ -176,7 +211,10 @@ export async function resolveIdentity(request, { secret, relaySecret = "", addre
 	// A verified relay header names the real visitor; without one the address
 	// of the direct connection is counted, exactly as before.
 	const relayed = await readRelayAddress(request.headers.get("x-pvpn-relay"), relaySecret)
-	const hashedAddress = await addressIdentity(relayed ?? clientAddress(request, address), secret)
+	const hashedAddress = await addressIdentity(
+		relayed ? normaliseAddress(relayed) : clientAddress(request, address),
+		secret,
+	)
 	if (hashedAddress) scopes.push({ scope: SCOPE_IP, identity: hashedAddress })
 
 	return { scopes, setCookie: issued?.header ?? null }
