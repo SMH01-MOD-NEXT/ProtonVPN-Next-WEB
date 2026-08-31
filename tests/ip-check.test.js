@@ -21,6 +21,7 @@ import { test } from "node:test"
 
 import {
 	PUBLIC_RESOLVERS,
+	countryProbes,
 	echoUrls,
 	isBypassUsable,
 	parseTrace,
@@ -71,12 +72,14 @@ test("Cloudflare is stepped over in Russia and preferred everywhere else", () =>
 	assert.deepEqual(deploymentOrder(resolverChain({ russian: false })), [
 		"same-origin",
 		"cloudflare",
+		"vercel",
 		"deno",
 	])
 	// Cloudflare is the endpoint currently being blocked there, so it goes last.
 	assert.deepEqual(deploymentOrder(resolverChain({ russian: true })), [
 		"same-origin",
 		"deno",
+		"vercel",
 		"cloudflare",
 	])
 })
@@ -88,11 +91,13 @@ test("an Event Bypass is tried ahead of Cloudflare in Russia", () => {
 		"same-origin",
 		"deno",
 		"bypass:mts",
+		"vercel",
 		"cloudflare",
 	])
 	assert.deepEqual(deploymentOrder(resolverChain({ russian: false, bypasses })), [
 		"same-origin",
 		"cloudflare",
+		"vercel",
 		"deno",
 		"bypass:mts",
 	])
@@ -114,17 +119,33 @@ test("a third party is never asked before the project's own copies", () => {
 })
 
 test("each deployment is asked on both URL shapes it may serve", () => {
-	// Vercel routes only the literal /api path, so the Proton path has to ride in
-	// __path there; every other copy of the proxy serves the plain path.
+	// Vercel routes to the proxy only through /api, so the Proton path has to
+	// ride in __path on that exact path; every other copy serves the plain path.
 	const expected = [
 		"https://example.invalid/__proxy/whoami",
-		"https://example.invalid?__path=/__proxy/whoami",
+		"https://example.invalid/api?__path=/__proxy/whoami",
 	]
 
 	assert.deepEqual(echoUrls("https://example.invalid"), expected)
 	assert.deepEqual(echoUrls("https://example.invalid/"), expected, "a trailing slash is not a new host")
 	assert.deepEqual(echoUrls(""), [])
 	assert.deepEqual(echoUrls(undefined), [])
+})
+
+test("the country is asked of our own deployments before a third party", () => {
+	const ids = (options) => countryProbes("203.0.113.7", options).map((probe) => probe.id)
+
+	assert.deepEqual(ids({ russian: false }), ["cloudflare-trace", "vercel-whoami", "country.is"])
+	// Cloudflare is the endpoint being blocked there, so asking it first means
+	// waiting out a timeout while the panel has an address and no country.
+	assert.deepEqual(ids({ russian: true }), ["vercel-whoami", "cloudflare-trace", "country.is"])
+	assert.deepEqual(ids(undefined), ids({ russian: false }), "not in Russia is the default")
+
+	const [vercel] = countryProbes("203.0.113.7", { russian: true })
+	assert.ok(vercel.url.includes("/api?__path="), "Vercel reaches the proxy only through /api")
+
+	const thirdParty = countryProbes("203.0.113.7").at(-1)
+	assert.ok(thirdParty.url.endsWith("203.0.113.7"), "a third party needs the address to answer")
 })
 
 test("Cloudflare's trace body is read as key=value lines", () => {
