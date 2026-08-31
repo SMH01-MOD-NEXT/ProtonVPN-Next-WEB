@@ -1,31 +1,31 @@
 {
   "nightly": {
     "debug": {
-      "versionCode": 605160361,
-      "versionName": "12.0.0-alpha2st3-25-ga2a0958-nightly",
+      "versionCode": 605160369,
+      "versionName": "12.0.0-alpha2st3-33-ga2f4764-nightly",
       "url": "https://r2.protonnext.qzz.io/VPN-Next-TEST/app-nightly-standard-debug.apk",
-      "changelog": "feat(settings): add DNS provider picker and region-locked DoT switch\n\nThe DNS screen gains a resolver picker (automatic plus the five trusted providers, each labelled with its jurisdiction) and a DoT switch. In Russia the switch renders locked on with the reason in place of its usual description, while the provider picker stays fully interactive, so the mandatory part is visible without taking away the part that is safe to choose.\n\nSection containers, row padding, radio and switch colours, dividers and the uppercase labelMedium section titles are all taken from the existing settings screens rather than redefined, so the screen is visually indistinguishable from its siblings.\n\nsetCustomDns now reports rejection instead of discarding it. The screen keeps itself open on a refused address and marks the field, because previously it closed as though the value had been saved.\n\nNew flows are appended at the end of the positional combine, per the warning comment there, so no existing index shifts.",
+      "changelog": "test(ip): cover what the real address cache may keep",
       "force": false
     },
     "release": {
-      "versionCode": 605160361,
-      "versionName": "12.0.0-alpha2st3-25-ga2a0958-nightly",
+      "versionCode": 605160369,
+      "versionName": "12.0.0-alpha2st3-33-ga2f4764-nightly",
       "url": "https://r2.protonnext.qzz.io/VPN-Next-TEST/app-nightly-standard-release.apk",
-      "changelog": "feat(settings): add DNS provider picker and region-locked DoT switch\n\nThe DNS screen gains a resolver picker (automatic plus the five trusted providers, each labelled with its jurisdiction) and a DoT switch. In Russia the switch renders locked on with the reason in place of its usual description, while the provider picker stays fully interactive, so the mandatory part is visible without taking away the part that is safe to choose.\n\nSection containers, row padding, radio and switch colours, dividers and the uppercase labelMedium section titles are all taken from the existing settings screens rather than redefined, so the screen is visually indistinguishable from its siblings.\n\nsetCustomDns now reports rejection instead of discarding it. The screen keeps itself open on a refused address and marks the field, because previously it closed as though the value had been saved.\n\nNew flows are appended at the end of the positional combine, per the warning comment there, so no existing index shifts.",
+      "changelog": "test(ip): cover what the real address cache may keep",
       "force": false
     },
     "privacyDebug": {
-      "versionCode": 605160361,
-      "versionName": "12.0.0-alpha2st3-25-ga2a0958-nightly",
+      "versionCode": 605160369,
+      "versionName": "12.0.0-alpha2st3-33-ga2f4764-nightly",
       "url": "https://r2.protonnext.qzz.io/VPN-Next-TEST/app-nightly-privacy-debug.apk",
-      "changelog": "feat(settings): add DNS provider picker and region-locked DoT switch\n\nThe DNS screen gains a resolver picker (automatic plus the five trusted providers, each labelled with its jurisdiction) and a DoT switch. In Russia the switch renders locked on with the reason in place of its usual description, while the provider picker stays fully interactive, so the mandatory part is visible without taking away the part that is safe to choose.\n\nSection containers, row padding, radio and switch colours, dividers and the uppercase labelMedium section titles are all taken from the existing settings screens rather than redefined, so the screen is visually indistinguishable from its siblings.\n\nsetCustomDns now reports rejection instead of discarding it. The screen keeps itself open on a refused address and marks the field, because previously it closed as though the value had been saved.\n\nNew flows are appended at the end of the positional combine, per the warning comment there, so no existing index shifts.",
+      "changelog": "test(ip): cover what the real address cache may keep",
       "force": false
     },
     "privacyRelease": {
-      "versionCode": 605160361,
-      "versionName": "12.0.0-alpha2st3-25-ga2a0958-nightly",
+      "versionCode": 605160369,
+      "versionName": "12.0.0-alpha2st3-33-ga2f4764-nightly",
       "url": "https://r2.protonnext.qzz.io/VPN-Next-TEST/app-nightly-privacy-release.apk",
-      "changelog": "feat(settings): add DNS provider picker and region-locked DoT switch\n\nThe DNS screen gains a resolver picker (automatic plus the five trusted providers, each labelled with its jurisdiction) and a DoT switch. In Russia the switch renders locked on with the reason in place of its usual description, while the provider picker stays fully interactive, so the mandatory part is visible without taking away the part that is safe to choose.\n\nSection containers, row padding, radio and switch colours, dividers and the uppercase labelMedium section titles are all taken from the existing settings screens rather than redefined, so the screen is visually indistinguishable from its siblings.\n\nsetCustomDns now reports rejection instead of discarding it. The screen keeps itself open on a refused address and marks the field, because previously it closed as though the value had been saved.\n\nNew flows are appended at the end of the positional combine, per the warning comment there, so no existing index shifts.",
+      "changelog": "test(ip): cover what the real address cache may keep",
       "force": false
     }
   },
