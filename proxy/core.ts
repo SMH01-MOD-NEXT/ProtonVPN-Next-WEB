@@ -221,6 +221,45 @@ export async function handleProxyRequest(
 			{ status: 200, headers: { ...cors, "content-type": "application/json" } },
 		)
 	}
+	// The visitor's own address, echoed straight back.
+	//
+	// Answered above the quota gate on purpose. The gate hashes the caller
+	// address and writes it to the store, and the whole point of this endpoint
+	// is that the server keeps nothing: the address is read off the request,
+	// put in the response and forgotten with it. Nothing here logs, counts or
+	// stores, and no cookie is issued.
+	if (pathname === "/__proxy/whoami") {
+		// Cloudflare resolves the country at the edge for free, and Vercel sets
+		// its own header. Every other runtime leaves this empty and the page asks
+		// a geolocation API instead, which is why the field may come back blank
+		// rather than the endpoint pretending to know.
+		const edgeCountry = (
+			request.headers.get("cf-ipcountry") ??
+			request.headers.get("x-vercel-ip-country") ??
+			""
+		).toUpperCase()
+
+		return new Response(
+			JSON.stringify({
+				ip: clientAddress(request, context?.address ?? ""),
+				// XX and T1 are Cloudflare's "unknown" and "Tor" placeholders, not
+				// countries; reporting them as such would be a lie the page cannot
+				// detect.
+				country: edgeCountry === "XX" || edgeCountry === "T1" ? "" : edgeCountry,
+			}),
+			{
+				status: 200,
+				headers: {
+					...cors,
+					"content-type": "application/json",
+					// No shared cache may hold one visitor's address and hand it to
+					// the next one.
+					"cache-control": "no-store, no-cache, must-revalidate, private",
+				},
+			},
+		)
+	}
+
 	// Everything below this point may be rate limited. The gate decides before
 	// the call goes anywhere, so a caller over quota never touches Proton.
 	const gate = await openQuotaGate(request, pathname, {

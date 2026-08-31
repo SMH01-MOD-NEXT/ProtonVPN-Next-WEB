@@ -20,6 +20,10 @@ export const PROXY_PREFIX = "/api"
  */
 export function proxyPathname(pathname: string): string | null {
 	if (pathname === "/__proxy/health") return pathname
+	// Same reasoning as health: the address echo has to answer identically on
+	// every deployment, including the standalone proxy with no site in front of
+	// it, so it keeps its root path as well as the prefixed one.
+	if (pathname === "/__proxy/whoami") return pathname
 	if (pathname === PROXY_PREFIX) return "/"
 	if (pathname.startsWith(`${PROXY_PREFIX}/`)) return pathname.slice(PROXY_PREFIX.length)
 	return null

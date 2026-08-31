@@ -237,6 +237,35 @@ export default async function handler(req: any, res: any) {
     return
   }
 
+  // The visitor's own address, echoed straight back.
+  //
+  // Answered before anything else happens to the request: the address is read
+  // off the headers, put in the response and forgotten with it. It is never
+  // hashed into a quota bucket, written to a store or logged, because the
+  // point of the feature is that no deployment ends up holding a list of
+  // visitor addresses.
+  if (pathname === "/__proxy/whoami") {
+    const edgeCountry = String(req.headers?.["x-vercel-ip-country"] ?? "").toUpperCase()
+    sendJson(
+      res,
+      200,
+      {
+        ...cors,
+        // No shared cache may hold one visitor's address and hand it to the
+        // next one.
+        "cache-control": "no-store, no-cache, must-revalidate, private",
+      },
+      {
+        ip: callerAddress(req),
+        // XX and T1 are "unknown" and "Tor" placeholders rather than
+        // countries; reporting them as such would be a lie the page cannot
+        // detect.
+        country: edgeCountry === "XX" || edgeCountry === "T1" ? "" : edgeCountry,
+      },
+    )
+    return
+  }
+
   const relayBase = via ? RELAYS[via] : undefined
   if (via && (!relayBase || !RELAY_SECRET)) {
     // Deliberately not a Proton-shaped payload: the client treats responses

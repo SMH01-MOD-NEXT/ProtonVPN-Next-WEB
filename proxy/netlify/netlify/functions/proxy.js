@@ -93,6 +93,41 @@ export default async function handler(request) {
 	}
 
 	const incoming = new URL(request.url)
+
+	// The visitor's own address, echoed straight back.
+	//
+	// Answered before the request goes anywhere: the address is read off the
+	// headers, put in the response and forgotten with it. Nothing is stored or
+	// logged, because the point of the feature is that no deployment ends up
+	// holding a list of visitor addresses.
+	if (
+		incoming.pathname === "/__proxy/whoami" ||
+		incoming.pathname === "/api/__proxy/whoami"
+	) {
+		const forwarded = request.headers.get("x-forwarded-for") ?? ""
+		const address =
+			request.headers.get("x-nf-client-connection-ip") ??
+			(forwarded ? forwarded.split(",")[0].trim() : "")
+
+		return new Response(
+			JSON.stringify({
+				ip: address,
+				// Netlify only exposes geo data to edge functions, so this one
+				// reports the address and leaves the country to the page's next
+				// source rather than guessing.
+				country: "",
+			}),
+			{
+				status: 200,
+				headers: {
+					...cors,
+					"content-type": "application/json",
+					"cache-control": "no-store, no-cache, must-revalidate, private",
+				},
+			},
+		)
+	}
+
 	const target = `${resolveUpstream(incoming.pathname)}${incoming.search}`
 
 	const headers = new Headers()
