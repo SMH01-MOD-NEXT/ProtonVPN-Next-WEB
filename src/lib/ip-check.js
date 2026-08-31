@@ -36,6 +36,7 @@ const REQUEST_TIMEOUT_MS = 6000
 /** Where the site's own copies of the proxy live. */
 const CLOUDFLARE_BASE = "https://home.protonnext.qzz.io"
 const DENO_BASE = "https://protonvpn-next-web--main.smh01-mirrors.deno.net"
+const VERCEL_BASE = "https://proton-vpn-next-web.vercel.app"
 
 /**
  * The same timezone set the Android client carries, so both halves of the
@@ -194,14 +195,15 @@ export const PUBLIC_RESOLVERS = [
 /**
  * Both URL forms a deployment's echo may answer on.
  *
- * Vercel routes only the literal `/api` path, so it needs the Proton path in
- * `__path`; every other copy of the proxy serves the plain path. Trying both
- * keeps one list of bases usable against all of them.
+ * Vercel routes to the proxy only through `/api`, so there the Proton path has
+ * to ride in `__path` on that exact path; asking for the plain path returns the
+ * static site's 404 instead of an address. Every other copy serves the plain
+ * path, so trying both shapes keeps one list of bases usable against all.
  */
 export function echoUrls(base) {
 	const trimmed = String(base ?? "").replace(/\/+$/, "")
 	if (!trimmed) return []
-	return [`${trimmed}/__proxy/whoami`, `${trimmed}?__path=/__proxy/whoami`]
+	return [`${trimmed}/__proxy/whoami`, `${trimmed}/api?__path=/__proxy/whoami`]
 }
 
 /**
@@ -256,20 +258,29 @@ export async function fetchEventBypassBases(signal) {
  *
  * Among the mirrors, Cloudflare is de-prioritised in Russia because it is the
  * endpoint currently being blocked there, and preferred everywhere else
- * because it resolves the country at the edge in the same response.
+ * because it resolves the country at the edge in the same response. Vercel does
+ * that too, so it follows Cloudflare outside Russia and stands in for it
+ * inside, where the Deno deployment answers but cannot name a country.
  */
 export function resolverChain({ russian = false, bypasses = [] } = {}) {
 	const cloudflare = { id: "cloudflare", base: CLOUDFLARE_BASE }
 	const deno = { id: "deno", base: DENO_BASE }
+	const vercel = { id: "vercel", base: VERCEL_BASE }
 	const sameOrigin = { id: "same-origin", base: "" }
 
 	const mirrors = russian
-		? [deno, ...bypasses, cloudflare]
-		: [cloudflare, deno, ...bypasses]
+		? [deno, ...bypasses, vercel, cloudflare]
+		: [cloudflare, vercel, deno, ...bypasses]
 
 	const sources = []
 	for (const deployment of [sameOrigin, ...mirrors]) {
-		for (const url of deployment.base ? echoUrls(deployment.base) : ["/__proxy/whoami"]) {
+		// The same origin has no base to build from, but it still needs both
+		// shapes: a copy of the page served by Vercel answers only the second.
+		const urls = deployment.base
+			? echoUrls(deployment.base)
+			: ["/__proxy/whoami", "/api?__path=/__proxy/whoami"]
+
+		for (const url of urls) {
 			sources.push({ id: deployment.id, url, kind: "json", read: (data) => ({ ip: data?.ip, country: data?.country }) })
 		}
 	}
@@ -312,39 +323,55 @@ async function askSource(source, signal) {
 }
 
 /**
- * The country of a known address, asked separately.
+ * The country of a known address, asked in a fixed order.
  *
  * Only reached when a source reported an address but no country, which is what
  * happens when the deployment that answered runs somewhere that does not
- * resolve the country at the edge. The project's own Cloudflare copy is asked
- * first, so the question normally stays inside the project's own
- * infrastructure; a third party is the last resort. Neither answer is stored.
+ * resolve the country at the edge: the Deno one, which returns the field empty.
+ * Our own copies are asked first, so the question normally stays inside this
+ * project's infrastructure, and a third party is the last resort. Neither
+ * answer is stored.
+ *
+ * Exported because the order is the whole behaviour here. Asking a host that is
+ * blocked before one that answers costs a full timeout, during which the panel
+ * has an address and no country to show beside it.
  */
-async function askCountry(ip, signal) {
-	const own = await askSource(
-		{
-			id: "cloudflare-trace",
-			url: `${CLOUDFLARE_BASE}/cdn-cgi/trace`,
-			kind: "text",
-			read: (text) => {
-				const fields = parseTrace(text)
-				return { ip: fields.ip, country: fields.loc }
-			},
+export function countryProbes(ip, { russian = false } = {}) {
+	const trace = {
+		id: "cloudflare-trace",
+		url: `${CLOUDFLARE_BASE}/cdn-cgi/trace`,
+		kind: "text",
+		read: (text) => {
+			const fields = parseTrace(text)
+			return { ip: fields.ip, country: fields.loc }
 		},
-		signal,
-	)
-	if (own?.country) return own.country
+	}
 
-	const result = await askSource(
-		{
-			id: "country.is",
-			url: `https://api.country.is/${encodeURIComponent(ip)}`,
-			kind: "json",
-			read: (data) => ({ ip: data?.ip, country: data?.country }),
-		},
-		signal,
-	)
-	return result?.country ?? ""
+	// The second shape echoUrls builds, which is the only one Vercel answers.
+	const vercel = {
+		id: "vercel-whoami",
+		url: echoUrls(VERCEL_BASE)[1],
+		kind: "json",
+		read: (data) => ({ ip: data?.ip, country: data?.country }),
+	}
+
+	const thirdParty = {
+		id: "country.is",
+		url: `https://api.country.is/${encodeURIComponent(ip)}`,
+		kind: "json",
+		read: (data) => ({ ip: data?.ip, country: data?.country }),
+	}
+
+	return russian ? [vercel, trace, thirdParty] : [trace, vercel, thirdParty]
+}
+
+async function askCountry(ip, signal, russian = false) {
+	for (const probe of countryProbes(ip, { russian })) {
+		const answer = await askSource(probe, signal)
+		if (answer?.country) return answer.country
+	}
+
+	return ""
 }
 
 /**
@@ -401,7 +428,7 @@ export async function resolveIpDetails({ signal } = {}) {
 		}
 
 		preferredSourceId = source.id
-		const country = result.country || (await askCountry(result.ip, signal))
+		const country = result.country || (await askCountry(result.ip, signal, russian))
 		if (country) lastKnownCountry = country
 
 		return { ...result, country }
