@@ -11,7 +11,7 @@ unmodified on every host. `routing.js` holds the path split, so a request lands
 on the same handler everywhere:
 
 - `../server.ts` - Deno Deploy: the site and the proxy in one deployment
-- `../server.js` - Wasmer Node: the built Vite site and proxy in one process
+- `../server.js` - Node mirrors (Wasmer and alwaysdata): the built Vite site and proxy in one process
 - `../worker/index.ts` - Cloudflare Worker: the same pair, independently
 - `deno/main.ts` - the proxy alone, for a deployment that serves no site
 
@@ -48,6 +48,7 @@ broken proxy:
 - `https://<name>.workers.dev` and `https://<name>.pages.dev` previews
 - `https://<service>--<project>--<team>.code.run`, the Northflank hostname
 - `https://<project>.wasmer.app`, the Wasmer Edge project hostname
+- `https://<account>.alwaysdata.net`, the default alwaysdata site hostname
 - `http://localhost` and `http://127.0.0.1` on any port
 
 An origin outside the patterns gets no `Access-Control-Allow-Origin` at all.
@@ -69,6 +70,12 @@ quota just to spell the URL without the `/api` prefix.
 | Netlify | `https://shimmering-stroopwafel-51675e.netlify.app` | Android and CLI only |
 | Northflank | `<service>--<project>--<team>.code.run/api` | spare host, metered |
 | Wasmer Edge | `https://<project>.wasmer.app/api` | source-built Node mirror and native clients |
+| alwaysdata | `https://<account>.alwaysdata.net/api` | source-built Node mirror and native clients |
+
+On alwaysdata, create a `Node.js` site with the repository as its working
+directory, `node server.js` as the command, and `HOST=:: NODE_ENV=production`
+as its environment. The platform supplies `PORT`; the server also accepts its
+platform-provided `IP` value when `HOST` is unset.
 
 The browser reaches its own origin first (`/api` in `API_ENDPOINTS`), so the
 absolute Deno URL is only a fallback for a copy of the site served elsewhere.

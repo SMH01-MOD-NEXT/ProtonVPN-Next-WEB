@@ -73,6 +73,8 @@ const ALLOWED_ORIGIN_PATTERNS = [
 	/^https:\/\/([a-z0-9-]+\.)+choreoapps\.dev$/,
 	// Wasmer Edge project host used by the full Node mirror.
 	/^https:\/\/[a-z0-9-]+\.wasmer\.app$/,
+	// Default host assigned to each alwaysdata account and Node site.
+	/^https:\/\/[a-z0-9-]+\.alwaysdata\.net$/,
 	/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/,
 ]
 

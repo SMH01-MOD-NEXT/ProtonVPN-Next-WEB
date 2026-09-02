@@ -4,7 +4,13 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { test } from "node:test"
 
-import { createMirrorServer } from "../server.js"
+import { createMirrorServer, runtimeHost } from "../server.js"
+
+test("the Node listener follows managed-host environment variables", () => {
+	assert.equal(runtimeHost({ HOST: "::", IP: "fd00::1" }), "::")
+	assert.equal(runtimeHost({ IP: "fd00::1" }), "fd00::1")
+	assert.equal(runtimeHost({}), "0.0.0.0")
+})
 
 async function listen(server) {
 	await new Promise((resolve, reject) => {
@@ -44,16 +50,21 @@ test("the Node deployment serves the mirror and shared Proton routes", async (co
 	const missingAsset = await fetch(`${base}/missing.js`)
 	assert.equal(missingAsset.status, 404)
 
-	const health = await fetch(`${base}/api/__proxy/health`, {
-		headers: { origin: "https://protonvpn-next-web.wasmer.app" },
-	})
-	assert.equal(health.status, 200)
-	assert.equal(health.headers.get("access-control-allow-origin"), "https://protonvpn-next-web.wasmer.app")
-	assert.deepEqual(await health.json(), {
-		build: "2026-09-02-wasmer-node",
-		origin: "https://protonvpn-next-web.wasmer.app",
-		originAllowed: true,
-		relayConfigured: false,
-		relayFallback: false,
-	})
+	for (const origin of [
+		"https://protonvpn-next-web.wasmer.app",
+		"https://smh01-mirrors.alwaysdata.net",
+	]) {
+		const health = await fetch(`${base}/api/__proxy/health`, {
+			headers: { origin },
+		})
+		assert.equal(health.status, 200)
+		assert.equal(health.headers.get("access-control-allow-origin"), origin)
+		assert.deepEqual(await health.json(), {
+			build: "2026-09-02-wasmer-node",
+			origin,
+			originAllowed: true,
+			relayConfigured: false,
+			relayFallback: false,
+		})
+	}
 })

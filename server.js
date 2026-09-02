@@ -215,9 +215,16 @@ export function createMirrorServer({
 	return server
 }
 
-export function startMirrorServer({ port = Number(process.env.PORT) || DEFAULT_PORT } = {}) {
+export function runtimeHost(env = process.env) {
+	return env.HOST?.trim() || env.IP?.trim() || "0.0.0.0"
+}
+
+export function startMirrorServer({
+	port = Number(process.env.PORT) || DEFAULT_PORT,
+	host = runtimeHost(),
+} = {}) {
 	const server = createMirrorServer()
-	server.listen(port, "0.0.0.0", () => {
+	server.listen(port, host, () => {
 		const address = server.address()
 		const actualPort = typeof address === "object" && address ? address.port : port
 		console.log(`Proton VPN-Next mirror listening on port ${actualPort}`)
