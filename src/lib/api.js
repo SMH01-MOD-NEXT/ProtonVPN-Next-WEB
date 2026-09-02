@@ -2,7 +2,7 @@
  * Proton API access for the browser.
  *
  * The API cannot be called directly from a page (no CORS headers on
- * vpn-api.proton.me), so every request goes through the proxy in `proxy/core.ts`.
+ * vpn-api.proton.me), so every request goes through the proxy in `proxy/core.js`.
  * Every host serves its own copy of the proxy under `/api`, so the site always
  * has a proxy on its own origin and neither deployment burns the other's quota.
  */

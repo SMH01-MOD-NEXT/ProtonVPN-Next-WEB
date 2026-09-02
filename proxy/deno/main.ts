@@ -7,7 +7,7 @@
  * on Cloudflare).
  */
 
-import { handleProxyRequest } from "../core.ts"
+import { handleProxyRequest } from "../core.js"
 
 export { handleProxyRequest }
 

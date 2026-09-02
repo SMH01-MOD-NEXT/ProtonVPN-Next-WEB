@@ -12,8 +12,8 @@
  */
 
 import { serveDir } from "jsr:@std/http@^1.0.0/file-server"
-import { handleProxyRequest } from "./proxy/core.ts"
-import { proxyPathname, wantsAppShell } from "./proxy/routing.ts"
+import { handleProxyRequest } from "./proxy/core.js"
+import { proxyPathname, wantsAppShell } from "./proxy/routing.js"
 import { createDenoStore } from "./proxy/store.js"
 
 /** Vite's build output, produced by the deployment's own build step. */

@@ -16,9 +16,6 @@
     "deploy": "npm run build && wrangler deploy",
     "start": "node server.js"
   },
-  "dependencies": {
-    "express": "^4.18.2"
-  },
   "devDependencies": {
     "@tailwindcss/vite": "^4.0.0",
     "@types/node": "^24.0.0",

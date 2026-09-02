@@ -53,7 +53,7 @@ curl -i -X OPTIONS \
 ```
 
 The `.code.run` hostname Northflank assigns is already in the origin allowlist
-(`proxy/core.ts`), matched by shape, so a rename of the service or project does
+(`proxy/core.js`), matched by shape, so a rename of the service or project does
 not break CORS.
 
 ## What it costs, and how to size it

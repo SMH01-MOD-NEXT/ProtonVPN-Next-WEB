@@ -28,7 +28,7 @@
  * `sessionStorage`, a cookie or the diagnostics buffer, because the point of
  * the feature is that neither the site nor its operator ends up holding a list
  * of addresses. The deployment echoes answer above their quota gate for the
- * same reason — see `proxy/core.ts`.
+ * same reason — see `proxy/core.js`.
  */
 
 const REQUEST_TIMEOUT_MS = 6000

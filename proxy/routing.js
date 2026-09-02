@@ -18,7 +18,7 @@ export const PROXY_PREFIX = "/api"
  * command must work the same way against every deployment, including the
  * standalone proxy that has no site in front of it.
  */
-export function proxyPathname(pathname: string): string | null {
+export function proxyPathname(pathname) {
 	if (pathname === "/__proxy/health") return pathname
 	// Same reasoning as health: the address echo has to answer identically on
 	// every deployment, including the standalone proxy with no site in front of
@@ -36,7 +36,7 @@ export function proxyPathname(pathname: string): string | null {
  * HTML in its place turns a broken path into a confusing parse error further
  * down the line.
  */
-export function wantsAppShell(request: Request, pathname: string): boolean {
+export function wantsAppShell(request, pathname) {
 	if (request.method !== "GET" && request.method !== "HEAD") return false
 	if (pathname.includes(".")) return false
 	return (request.headers.get("accept") ?? "").includes("text/html")

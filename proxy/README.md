@@ -4,13 +4,14 @@ The config generator runs entirely in the browser, but `vpn-api.proton.me`
 sends no CORS headers and rejects preflight, so a page can never read its
 responses. This proxy forwards the request and adds the missing headers.
 
-## One codebase, three entrypoints
+## One codebase, four entrypoints
 
-`core.ts` holds the whole proxy and uses Web APIs only, so the same code runs
-unmodified on every host. `routing.ts` holds the path split, so a request lands
+`core.js` holds the whole proxy and uses Web APIs only, so the same code runs
+unmodified on every host. `routing.js` holds the path split, so a request lands
 on the same handler everywhere:
 
 - `../server.ts` - Deno Deploy: the site and the proxy in one deployment
+- `../server.js` - Wasmer Node: the built Vite site and proxy in one process
 - `../worker/index.ts` - Cloudflare Worker: the same pair, independently
 - `deno/main.ts` - the proxy alone, for a deployment that serves no site
 
@@ -46,6 +47,7 @@ broken proxy:
 - `https://` + any subdomain of `protonnext.qzz.io`
 - `https://<name>.workers.dev` and `https://<name>.pages.dev` previews
 - `https://<service>--<project>--<team>.code.run`, the Northflank hostname
+- `https://<project>.wasmer.app`, the Wasmer Edge project hostname
 - `http://localhost` and `http://127.0.0.1` on any port
 
 An origin outside the patterns gets no `Access-Control-Allow-Origin` at all.
@@ -66,6 +68,7 @@ quota just to spell the URL without the `/api` prefix.
 | Cloudflare | `<worker-url>/api` | website only, when Deno is unreachable |
 | Netlify | `https://shimmering-stroopwafel-51675e.netlify.app` | Android and CLI only |
 | Northflank | `<service>--<project>--<team>.code.run/api` | spare host, metered |
+| Wasmer Edge | `https://<project>.wasmer.app/api` | source-built Node mirror and native clients |
 
 The browser reaches its own origin first (`/api` in `API_ENDPOINTS`), so the
 absolute Deno URL is only a fallback for a copy of the site served elsewhere.

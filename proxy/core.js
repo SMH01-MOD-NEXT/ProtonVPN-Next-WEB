@@ -14,35 +14,30 @@
  * a deployment does not run, and without a marker the only symptom is a CORS
  * error that looks identical to a code bug.
  */
-const PROXY_BUILD = "2026-08-18-relay-fallback"
+const PROXY_BUILD = "2026-09-02-wasmer-node"
 
 import { openQuotaGate } from "./quota.js"
 import { clientAddress, relayProof } from "./identity.js"
 
 /** Best-effort JSON store; see `store.js` for the backends behind it. */
-export interface QuotaStore {
-	id: string
-	get: (key: string) => Promise<unknown>
-	put: (key: string, value: unknown, ttlMs: number) => Promise<void>
-	delete: (key: string) => Promise<void>
-}
+/**
+ * @typedef {object} QuotaStore
+ * @property {string} id
+ * @property {(key: string) => Promise<unknown>} get
+ * @property {(key: string, value: unknown, ttlMs: number) => Promise<void>} put
+ * @property {(key: string) => Promise<void>} delete
+ */
 
-/** Per-deployment wiring for the quota gate. */
-export interface ProxyContext {
-	store?: QuotaStore | null
-	secret?: string
-	/** Shared secret verifying the caller address a relaying sibling claims. */
-	relaySecret?: string
-	/** Caller address for runtimes that do not put it in a header. */
-	address?: string
-	/**
-	 * Sibling proxy retried once when the direct upstream answers with a
-	 * Cloudflare edge error (521/522/523/525/526) — the shape Proton's egress
-	 * blackholing takes. Fires only together with relaySecret, which signs the
-	 * caller's address so the sibling's quotas stay per visitor.
-	 */
-	relayUrl?: string
-}
+/**
+ * Per-deployment wiring for the quota gate.
+ *
+ * @typedef {object} ProxyContext
+ * @property {QuotaStore | null} [store]
+ * @property {string} [secret]
+ * @property {string} [relaySecret] Shared secret verifying a relayed caller address.
+ * @property {string} [address] Caller address for runtimes without an address header.
+ * @property {string} [relayUrl] Sibling retried after a Proton edge error.
+ */
 
 /**
  * Fallback signing secret.
@@ -64,7 +59,7 @@ const FALLBACK_SECRET = "pvpn-next-quota-fallback-secret"
  * arbitrary ports, and an origin missing from a hardcoded list fails in a way
  * that looks exactly like a broken proxy.
  */
-const ALLOWED_ORIGIN_PATTERNS: RegExp[] = [
+const ALLOWED_ORIGIN_PATTERNS = [
 	/^https:\/\/([a-z0-9-]+\.)*protonnext\.qzz\.io$/,
 	/^https:\/\/[a-z0-9-]+\.workers\.dev$/,
 	/^https:\/\/[a-z0-9-]+\.pages\.dev$/,
@@ -76,14 +71,16 @@ const ALLOWED_ORIGIN_PATTERNS: RegExp[] = [
 	// labels vary with the organization, project and environment, so the mirror
 	// there is matched by shape like the others.
 	/^https:\/\/([a-z0-9-]+\.)+choreoapps\.dev$/,
+	// Wasmer Edge project host used by the full Node mirror.
+	/^https:\/\/[a-z0-9-]+\.wasmer\.app$/,
 	/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/,
 ]
 
-function isAllowedOrigin(origin: string): boolean {
+function isAllowedOrigin(origin) {
 	return ALLOWED_ORIGIN_PATTERNS.some((pattern) => pattern.test(origin))
 }
 
-const UPSTREAMS: Array<{ prefix: string; host: string }> = [
+const UPSTREAMS = [
 	{ prefix: "/verify-api", host: "https://verify-api.proton.me" },
 	{ prefix: "/verify", host: "https://verify.proton.me" },
 ]
@@ -136,8 +133,8 @@ const FORWARDED_REQUEST_HEADERS = [
 	"user-agent",
 ]
 
-function corsHeaders(origin: string): Record<string, string> {
-	const headers: Record<string, string> = {
+function corsHeaders(origin) {
+	const headers = {
 		"access-control-allow-methods": "GET, POST, PUT, DELETE, OPTIONS",
 		"access-control-allow-headers": FORWARDED_REQUEST_HEADERS.join(", "),
 		// Short on purpose: a browser caches a failed preflight too, and a whole
@@ -154,7 +151,7 @@ function corsHeaders(origin: string): Record<string, string> {
 	return headers
 }
 
-function resolveUpstream(pathname: string): string {
+function resolveUpstream(pathname) {
 	for (const upstream of UPSTREAMS) {
 		if (pathname === upstream.prefix || pathname.startsWith(`${upstream.prefix}/`)) {
 			return `${upstream.host}${pathname.slice(upstream.prefix.length) || "/"}`
@@ -175,10 +172,10 @@ function resolveUpstream(pathname: string): string {
  *   not the button-spamming case this guards against.
  */
 export async function handleProxyRequest(
-	request: Request,
-	pathnameOverride?: string,
-	context?: ProxyContext,
-): Promise<Response> {
+	request,
+	pathnameOverride,
+	context,
+) {
 	const origin = request.headers.get("origin") ?? ""
 	const cors = corsHeaders(origin)
 	cors["access-control-expose-headers"] = EXPOSED_RESPONSE_HEADERS.join(", ")
@@ -269,7 +266,7 @@ export async function handleProxyRequest(
 		address: context?.address ?? "",
 	})
 
-	const withGateHeaders = (headers: Headers): Headers => {
+	const withGateHeaders = (headers) => {
 		for (const [name, value] of Object.entries(gate.headers)) headers.set(name, value)
 		if (gate.setCookie) headers.append("set-cookie", gate.setCookie)
 		return headers
@@ -294,7 +291,7 @@ export async function handleProxyRequest(
 	// cannot be consumed twice.
 	const body = ["GET", "HEAD"].includes(request.method) ? undefined : await request.text()
 
-	let upstreamResponse: Response
+	let upstreamResponse
 	try {
 		upstreamResponse = await fetch(target, {
 			method: request.method,

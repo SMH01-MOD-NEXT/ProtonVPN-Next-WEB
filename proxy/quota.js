@@ -3,7 +3,7 @@
  *
  * `limits.js` holds the rules and the arithmetic, `identity.js` decides who is
  * calling and `store.js` remembers it. This file is the part that ties them
- * together and is the only one `core.ts` has to know about.
+ * together and is the only one `core.js` has to know about.
  *
  * The flow for one call:
  *

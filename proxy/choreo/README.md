@@ -49,5 +49,5 @@ curl -i -X OPTIONS \
 ```
 
 The `*.choreoapps.dev` hostnames Choreo assigns are already in the origin
-allowlist (`proxy/core.ts`), matched by shape, so a rename of the component or
+allowlist (`proxy/core.js`), matched by shape, so a rename of the component or
 a custom short URL does not break CORS.

@@ -12,8 +12,8 @@
  * is why the Deno deployment stays the primary one.
  */
 
-import { handleProxyRequest } from "../proxy/core.ts"
-import { proxyPathname, wantsAppShell } from "../proxy/routing.ts"
+import { handleProxyRequest } from "../proxy/core.js"
+import { proxyPathname, wantsAppShell } from "../proxy/routing.js"
 import { createWorkerStore } from "../proxy/store.js"
 
 interface Env {
