@@ -1,31 +1,31 @@
 {
   "nightly": {
     "debug": {
-      "versionCode": 605160370,
-      "versionName": "12.0.0-alpha2st3-34-g81f0bd4-nightly",
+      "versionCode": 605160374,
+      "versionName": "12.0.0-alpha2st3-38-ge4b08fa-nightly",
       "url": "https://r2.protonnext.qzz.io/VPN-Next-TEST/app-nightly-standard-debug.apk",
-      "changelog": "chore: update dependencies\n\n- Update AGP to 9.5.0-alpha04 and Kotlin to 2.4.20\n- Update Room to 2.8.5\n- Update Sentry and Sentry Android versions\n- Update Compose BOM to 2026.09.00 and Navigation Compose to 2.10.1\n- Update Compose Material 3 to 1.5.0-alpha28\n- Update collectionsImmutable to 0.5.2",
+      "changelog": "ci: install the android-37.1 platform and ignore __pycache__\n\nThe build now needs compileSdk 37 with compileSdkMinor = 1, so GitLab CI and Woodpecker have to provision platforms;android-37.1 instead of 37.0, otherwise checkAarMetadata fails on tor-android 0.4.9.12. BUILD_INSTRUCTIONS documents the same requirement for local setups, and scripts/__pycache__ no longer shows up as untracked.",
       "force": false
     },
     "release": {
-      "versionCode": 605160370,
-      "versionName": "12.0.0-alpha2st3-34-g81f0bd4-nightly",
+      "versionCode": 605160374,
+      "versionName": "12.0.0-alpha2st3-38-ge4b08fa-nightly",
       "url": "https://r2.protonnext.qzz.io/VPN-Next-TEST/app-nightly-standard-release.apk",
-      "changelog": "chore: update dependencies\n\n- Update AGP to 9.5.0-alpha04 and Kotlin to 2.4.20\n- Update Room to 2.8.5\n- Update Sentry and Sentry Android versions\n- Update Compose BOM to 2026.09.00 and Navigation Compose to 2.10.1\n- Update Compose Material 3 to 1.5.0-alpha28\n- Update collectionsImmutable to 0.5.2",
+      "changelog": "ci: install the android-37.1 platform and ignore __pycache__\n\nThe build now needs compileSdk 37 with compileSdkMinor = 1, so GitLab CI and Woodpecker have to provision platforms;android-37.1 instead of 37.0, otherwise checkAarMetadata fails on tor-android 0.4.9.12. BUILD_INSTRUCTIONS documents the same requirement for local setups, and scripts/__pycache__ no longer shows up as untracked.",
       "force": false
     },
     "privacyDebug": {
-      "versionCode": 605160370,
-      "versionName": "12.0.0-alpha2st3-34-g81f0bd4-nightly",
+      "versionCode": 605160374,
+      "versionName": "12.0.0-alpha2st3-38-ge4b08fa-nightly",
       "url": "https://r2.protonnext.qzz.io/VPN-Next-TEST/app-nightly-privacy-debug.apk",
-      "changelog": "chore: update dependencies\n\n- Update AGP to 9.5.0-alpha04 and Kotlin to 2.4.20\n- Update Room to 2.8.5\n- Update Sentry and Sentry Android versions\n- Update Compose BOM to 2026.09.00 and Navigation Compose to 2.10.1\n- Update Compose Material 3 to 1.5.0-alpha28\n- Update collectionsImmutable to 0.5.2",
+      "changelog": "ci: install the android-37.1 platform and ignore __pycache__\n\nThe build now needs compileSdk 37 with compileSdkMinor = 1, so GitLab CI and Woodpecker have to provision platforms;android-37.1 instead of 37.0, otherwise checkAarMetadata fails on tor-android 0.4.9.12. BUILD_INSTRUCTIONS documents the same requirement for local setups, and scripts/__pycache__ no longer shows up as untracked.",
       "force": false
     },
     "privacyRelease": {
-      "versionCode": 605160370,
-      "versionName": "12.0.0-alpha2st3-34-g81f0bd4-nightly",
+      "versionCode": 605160374,
+      "versionName": "12.0.0-alpha2st3-38-ge4b08fa-nightly",
       "url": "https://r2.protonnext.qzz.io/VPN-Next-TEST/app-nightly-privacy-release.apk",
-      "changelog": "chore: update dependencies\n\n- Update AGP to 9.5.0-alpha04 and Kotlin to 2.4.20\n- Update Room to 2.8.5\n- Update Sentry and Sentry Android versions\n- Update Compose BOM to 2026.09.00 and Navigation Compose to 2.10.1\n- Update Compose Material 3 to 1.5.0-alpha28\n- Update collectionsImmutable to 0.5.2",
+      "changelog": "ci: install the android-37.1 platform and ignore __pycache__\n\nThe build now needs compileSdk 37 with compileSdkMinor = 1, so GitLab CI and Woodpecker have to provision platforms;android-37.1 instead of 37.0, otherwise checkAarMetadata fails on tor-android 0.4.9.12. BUILD_INSTRUCTIONS documents the same requirement for local setups, and scripts/__pycache__ no longer shows up as untracked.",
       "force": false
     }
   },
