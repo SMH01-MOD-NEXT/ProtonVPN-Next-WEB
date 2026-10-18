@@ -1,31 +1,31 @@
 {
   "nightly": {
     "debug": {
-      "versionCode": 605160380,
-      "versionName": "12.0.0-alpha2st4-nightly",
+      "versionCode": 605160381,
+      "versionName": "12.0.0-alpha2st4-1-gffe65bb-nightly",
       "url": "https://r2.protonnext.qzz.io/VPN-Next-TEST/app-nightly-standard-debug.apk",
-      "changelog": "chore: translate IP lookup service strings into be, fa, kk, uk and zh",
+      "changelog": "build: update Android amnezia-box to 1.15.0-alpha.12-awgm.33",
       "force": false
     },
     "release": {
-      "versionCode": 605160380,
-      "versionName": "12.0.0-alpha2st4-nightly",
+      "versionCode": 605160381,
+      "versionName": "12.0.0-alpha2st4-1-gffe65bb-nightly",
       "url": "https://r2.protonnext.qzz.io/VPN-Next-TEST/app-nightly-standard-release.apk",
-      "changelog": "chore: translate IP lookup service strings into be, fa, kk, uk and zh",
+      "changelog": "build: update Android amnezia-box to 1.15.0-alpha.12-awgm.33",
       "force": false
     },
     "privacyDebug": {
-      "versionCode": 605160380,
-      "versionName": "12.0.0-alpha2st4-nightly",
+      "versionCode": 605160381,
+      "versionName": "12.0.0-alpha2st4-1-gffe65bb-nightly",
       "url": "https://r2.protonnext.qzz.io/VPN-Next-TEST/app-nightly-privacy-debug.apk",
-      "changelog": "chore: translate IP lookup service strings into be, fa, kk, uk and zh",
+      "changelog": "build: update Android amnezia-box to 1.15.0-alpha.12-awgm.33",
       "force": false
     },
     "privacyRelease": {
-      "versionCode": 605160380,
-      "versionName": "12.0.0-alpha2st4-nightly",
+      "versionCode": 605160381,
+      "versionName": "12.0.0-alpha2st4-1-gffe65bb-nightly",
       "url": "https://r2.protonnext.qzz.io/VPN-Next-TEST/app-nightly-privacy-release.apk",
-      "changelog": "chore: translate IP lookup service strings into be, fa, kk, uk and zh",
+      "changelog": "build: update Android amnezia-box to 1.15.0-alpha.12-awgm.33",
       "force": false
     }
   },
