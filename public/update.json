@@ -1,31 +1,31 @@
 {
   "nightly": {
     "debug": {
-      "versionCode": 605160384,
-      "versionName": "12.0.0-alpha2st4-4-gb327c9b-nightly",
+      "versionCode": 605160387,
+      "versionName": "12.0.0-alpha3-nightly",
       "url": "https://r2.protonnext.qzz.io/VPN-Next-TEST/app-nightly-standard-debug.apk",
-      "changelog": "fix: use built-in Go TUN stack to avoid Android system TCP stalls",
+      "changelog": "build: update Android amnezia-box to 1.15.0-alpha.13-awgm.35\n\nPin ab29892ee9511775edb53918b8ec79eaa14be6fb and build with\ngomobile/gobind v0.1.13 like upstream. Go stays on 1.25.5 per go.mod;\nboth Tor patches apply unchanged.\n\nlibbox removed PlatformInterface.useProcFS(), so drop the override.\nConnection owners are still resolved via getConnectionOwnerUid().",
       "force": false
     },
     "release": {
-      "versionCode": 605160384,
-      "versionName": "12.0.0-alpha2st4-4-gb327c9b-nightly",
+      "versionCode": 605160387,
+      "versionName": "12.0.0-alpha3-nightly",
       "url": "https://r2.protonnext.qzz.io/VPN-Next-TEST/app-nightly-standard-release.apk",
-      "changelog": "fix: use built-in Go TUN stack to avoid Android system TCP stalls",
+      "changelog": "build: update Android amnezia-box to 1.15.0-alpha.13-awgm.35\n\nPin ab29892ee9511775edb53918b8ec79eaa14be6fb and build with\ngomobile/gobind v0.1.13 like upstream. Go stays on 1.25.5 per go.mod;\nboth Tor patches apply unchanged.\n\nlibbox removed PlatformInterface.useProcFS(), so drop the override.\nConnection owners are still resolved via getConnectionOwnerUid().",
       "force": false
     },
     "privacyDebug": {
-      "versionCode": 605160384,
-      "versionName": "12.0.0-alpha2st4-4-gb327c9b-nightly",
+      "versionCode": 605160387,
+      "versionName": "12.0.0-alpha3-nightly",
       "url": "https://r2.protonnext.qzz.io/VPN-Next-TEST/app-nightly-privacy-debug.apk",
-      "changelog": "fix: use built-in Go TUN stack to avoid Android system TCP stalls",
+      "changelog": "build: update Android amnezia-box to 1.15.0-alpha.13-awgm.35\n\nPin ab29892ee9511775edb53918b8ec79eaa14be6fb and build with\ngomobile/gobind v0.1.13 like upstream. Go stays on 1.25.5 per go.mod;\nboth Tor patches apply unchanged.\n\nlibbox removed PlatformInterface.useProcFS(), so drop the override.\nConnection owners are still resolved via getConnectionOwnerUid().",
       "force": false
     },
     "privacyRelease": {
-      "versionCode": 605160384,
-      "versionName": "12.0.0-alpha2st4-4-gb327c9b-nightly",
+      "versionCode": 605160387,
+      "versionName": "12.0.0-alpha3-nightly",
       "url": "https://r2.protonnext.qzz.io/VPN-Next-TEST/app-nightly-privacy-release.apk",
-      "changelog": "fix: use built-in Go TUN stack to avoid Android system TCP stalls",
+      "changelog": "build: update Android amnezia-box to 1.15.0-alpha.13-awgm.35\n\nPin ab29892ee9511775edb53918b8ec79eaa14be6fb and build with\ngomobile/gobind v0.1.13 like upstream. Go stays on 1.25.5 per go.mod;\nboth Tor patches apply unchanged.\n\nlibbox removed PlatformInterface.useProcFS(), so drop the override.\nConnection owners are still resolved via getConnectionOwnerUid().",
       "force": false
     }
   },
