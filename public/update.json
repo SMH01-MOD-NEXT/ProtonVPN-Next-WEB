@@ -31,17 +31,17 @@
   },
   "stable": {
     "release": {
-      "versionCode": 605160380,
-      "versionName": "12.0.0-alpha2st4",
+      "versionCode": 605160387,
+      "versionName": "12.0.0-alpha3",
       "url": "https://r2.protonnext.qzz.io/VPN-Next/app-stable-standard-release.apk",
-      "changelog": "chore: translate IP lookup service strings into be, fa, kk, uk and zh",
+      "changelog": "build: update Android amnezia-box to 1.15.0-alpha.13-awgm.35\n\nPin ab29892ee9511775edb53918b8ec79eaa14be6fb and build with\ngomobile/gobind v0.1.13 like upstream. Go stays on 1.25.5 per go.mod;\nboth Tor patches apply unchanged.\n\nlibbox removed PlatformInterface.useProcFS(), so drop the override.\nConnection owners are still resolved via getConnectionOwnerUid().",
       "force": false
     },
     "privacyRelease": {
-      "versionCode": 605160380,
-      "versionName": "12.0.0-alpha2st4",
+      "versionCode": 605160387,
+      "versionName": "12.0.0-alpha3",
       "url": "https://r2.protonnext.qzz.io/VPN-Next/app-stable-privacy-release.apk",
-      "changelog": "chore: translate IP lookup service strings into be, fa, kk, uk and zh",
+      "changelog": "build: update Android amnezia-box to 1.15.0-alpha.13-awgm.35\n\nPin ab29892ee9511775edb53918b8ec79eaa14be6fb and build with\ngomobile/gobind v0.1.13 like upstream. Go stays on 1.25.5 per go.mod;\nboth Tor patches apply unchanged.\n\nlibbox removed PlatformInterface.useProcFS(), so drop the override.\nConnection owners are still resolved via getConnectionOwnerUid().",
       "force": false
     }
   }
