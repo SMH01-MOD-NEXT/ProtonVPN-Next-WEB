@@ -249,5 +249,10 @@
   "warp_busy": "Registering…",
   "warp_ready": "Configuration ready",
   "warp_error": "WARP registration failed. Check the connection and mirror version.",
-  "warp_direct_error": "Direct registration failed. The browser may block the WARP API through CORS. No mirror was used."
+  "warp_direct_error": "Direct registration failed. The browser may block the WARP API through CORS. No mirror was used.",
+  "warp_endpoint": "Endpoint IPv4 (optional)",
+  "warp_api_endpoint": "From registration response",
+  "warp_port": "UDP port (2408, 500, 1701, 4500 official)",
+  "warp_awg2": "AWG 2.0 / QUIC — experimental",
+  "warp_candidates_notice": "IP suggestions and the other 50 ports are candidates, not successful handshake results. AWG2 matches the reference generator: standard WG headers and no Reserved; test it on your network. MASQUE and bot-only endpoints are excluded."
 }
