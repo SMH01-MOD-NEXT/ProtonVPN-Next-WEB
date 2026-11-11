@@ -1,3 +1,4 @@
+import { handleWarpRegistration } from "../../../warp.js"
 /**
  * Netlify proxy for the Proton API, with CORS enabled for the website.
  *
@@ -127,6 +128,8 @@ export default async function handler(request) {
 			},
 		)
 	}
+
+	if (incoming.pathname === "/warp/reg" || incoming.pathname === "/api/warp/reg") return handleWarpRegistration(request, cors)
 
 	const target = `${resolveUpstream(incoming.pathname)}${incoming.search}`
 

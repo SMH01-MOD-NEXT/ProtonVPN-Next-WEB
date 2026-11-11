@@ -1,3 +1,4 @@
+import { handleWarpRegistration } from "../proxy/warp.js"
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /** Vercel serverless function proxying requests to the Proton VPN API. */
 
@@ -234,6 +235,18 @@ export default async function handler(req: any, res: any) {
     applyHeaders(res, cors)
     res.statusCode = 204
     res.end()
+    return
+  }
+
+  if (pathname === "/warp/reg") {
+    const body = await readRequestBody(req)
+    const response = await handleWarpRegistration(new Request("https://warp.invalid/warp/reg", {
+      method: req.method, headers: { "content-type": "application/json" },
+      body: ["GET", "HEAD"].includes(req.method) ? undefined : body,
+    }), cors)
+    response.headers.forEach((value, key) => res.setHeader(key, value))
+    res.statusCode = response.status
+    res.end(await response.text())
     return
   }
 

@@ -240,5 +240,14 @@
   "sponsors_title": "Tools we rely on",
   "footer_telegram": "Telegram",
   "footer_lite": "Lite version",
-  "footer_license": "Released under the GNU GPL v3."
+  "footer_license": "Released under the GNU GPL v3.",
+  "warp_title": "WARP configuration",
+  "warp_note": "Keys are generated on your device. Registration accepts Cloudflare terms. Keep the downloaded configuration private.",
+  "warp_bypass": "Use API bypass",
+  "warp_generate": "Generate WARP",
+  "warp_download": "Download configuration",
+  "warp_busy": "Registering…",
+  "warp_ready": "Configuration ready",
+  "warp_error": "WARP registration failed. Check the connection and mirror version.",
+  "warp_direct_error": "Direct registration failed. The browser may block the WARP API through CORS. No mirror was used."
 }

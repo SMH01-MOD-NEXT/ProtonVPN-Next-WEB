@@ -1,3 +1,4 @@
+import { mountWarp } from "./ui/warp.js"
 import "./style.css"
 
 import {
@@ -38,6 +39,9 @@ function start() {
 
 	const generatorRoot = document.querySelector("#generator-root")
 	if (generatorRoot) mountGenerator(generatorRoot)
+
+	const warpRoot = document.querySelector("#warp-root")
+	if (warpRoot) mountWarp(warpRoot)
 
 	const ipCheckRoot = document.querySelector("#ipcheck-root")
 	if (ipCheckRoot) mountIpCheck(ipCheckRoot)

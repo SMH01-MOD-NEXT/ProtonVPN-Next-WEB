@@ -1,3 +1,4 @@
+import { handleWarpRegistration } from "./warp.js"
 /**
  * Proton API proxy, written against Web APIs only so the same code runs on both
  * platforms the site is deployed to.
@@ -205,6 +206,8 @@ export async function handleProxyRequest(
 			: `/${queryPath}`
 		: (pathnameOverride ?? incoming.pathname)
 	if (queryPath) incoming.searchParams.delete("__path")
+
+	if (pathname === "/warp/reg") return handleWarpRegistration(request, cors)
 
 	// Tells which build is actually live and whether this caller's origin would
 	// be accepted, without having to trigger a real CORS failure to find out.
