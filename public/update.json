@@ -1,31 +1,31 @@
 {
   "nightly": {
     "debug": {
-      "versionCode": 605160391,
-      "versionName": "12.0.0-alpha3-4-g95a9cc9-nightly",
+      "versionCode": 605160395,
+      "versionName": "12.0.0-alpha3-8-g68ade0d-nightly",
       "url": "https://r2.protonnext.qzz.io/VPN-Next-TEST/app-nightly-standard-debug.apk",
-      "changelog": "chore: update spoofed app version to 5.21.57.0\n\nUpdate SPOOFED_APP_VERSION in DeviceInfoProvider to match the latest official client.",
+      "changelog": "fix(vpn): start WARP proxy chains without requiring IPv6",
       "force": false
     },
     "release": {
-      "versionCode": 605160391,
-      "versionName": "12.0.0-alpha3-4-g95a9cc9-nightly",
+      "versionCode": 605160395,
+      "versionName": "12.0.0-alpha3-8-g68ade0d-nightly",
       "url": "https://r2.protonnext.qzz.io/VPN-Next-TEST/app-nightly-standard-release.apk",
-      "changelog": "chore: update spoofed app version to 5.21.57.0\n\nUpdate SPOOFED_APP_VERSION in DeviceInfoProvider to match the latest official client.",
+      "changelog": "fix(vpn): start WARP proxy chains without requiring IPv6",
       "force": false
     },
     "privacyDebug": {
-      "versionCode": 605160391,
-      "versionName": "12.0.0-alpha3-4-g95a9cc9-nightly",
+      "versionCode": 605160395,
+      "versionName": "12.0.0-alpha3-8-g68ade0d-nightly",
       "url": "https://r2.protonnext.qzz.io/VPN-Next-TEST/app-nightly-privacy-debug.apk",
-      "changelog": "chore: update spoofed app version to 5.21.57.0\n\nUpdate SPOOFED_APP_VERSION in DeviceInfoProvider to match the latest official client.",
+      "changelog": "fix(vpn): start WARP proxy chains without requiring IPv6",
       "force": false
     },
     "privacyRelease": {
-      "versionCode": 605160391,
-      "versionName": "12.0.0-alpha3-4-g95a9cc9-nightly",
+      "versionCode": 605160395,
+      "versionName": "12.0.0-alpha3-8-g68ade0d-nightly",
       "url": "https://r2.protonnext.qzz.io/VPN-Next-TEST/app-nightly-privacy-release.apk",
-      "changelog": "chore: update spoofed app version to 5.21.57.0\n\nUpdate SPOOFED_APP_VERSION in DeviceInfoProvider to match the latest official client.",
+      "changelog": "fix(vpn): start WARP proxy chains without requiring IPv6",
       "force": false
     }
   },
