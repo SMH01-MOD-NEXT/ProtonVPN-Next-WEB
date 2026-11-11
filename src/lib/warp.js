@@ -15,8 +15,8 @@ export function warpConfig(privateKey, result) {
  const addresses = [ip.v4 + "/32", ...(ip.v6 ? [ip.v6 + "/128"] : [])]
  return `[Interface]\nPrivateKey = ${privateKey}\nAddress = ${addresses.join(", ")}\nDNS = 1.1.1.1\nMTU = 1280\n\n[Peer]\nPublicKey = ${peer.public_key}\nEndpoint = ${endpoint}\nAllowedIPs = 0.0.0.0/0, ::/0\nPersistentKeepalive = 25\nReserved = ${reserved.join(", ")}\n`
 }
-export async function generateWarp({ bypass = true, signal, fetcher = fetch, endpoint = "", port = null, awg2 = false } = {}) {
- validateWarpOptions({ endpoint, port })
+export async function generateWarp({ bypass = true, signal, fetcher = fetch, endpoint = "", port = null, awg2 = false, customEndpoint = false } = {}) {
+ validateWarpOptions({ endpoint, port, customEndpoint })
  const keys = await crypto.subtle.generateKey({ name: "X25519" }, true, ["deriveBits"])
  const pub = b64(await crypto.subtle.exportKey("raw", keys.publicKey))
  const jwk = await crypto.subtle.exportKey("jwk", keys.privateKey)
@@ -29,7 +29,7 @@ export async function generateWarp({ bypass = true, signal, fetcher = fetch, end
   try { response = await fetcher(route, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body), signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(25000)]) : AbortSignal.timeout(25000), credentials: "omit", cache: "no-store" }) }
   catch (error) { if (signal?.aborted) throw error; continue }
   if (!response.ok) continue
-  try { return await applyWarpOptions(warpConfig(secret, await response.json()), { endpoint, port, awg2 }) } catch { /* Try the other routing form, never change privacy mode. */ }
+  try { return await applyWarpOptions(warpConfig(secret, await response.json()), { endpoint, port, awg2, customEndpoint }) } catch { /* Try the other routing form, never change privacy mode. */ }
  }
  throw new Error("WARP registration failed")
 }

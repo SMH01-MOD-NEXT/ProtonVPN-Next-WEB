@@ -19,3 +19,15 @@ Generation now accepts an IPv4 candidate, any of the 54 published ports, and an 
 AWG2 profile: Jc=4, Jmin=40, Jmax=70, S1=S2=S3=S4=0, H1=1/H2=2/H3=3/H4=4. I1 is generated locally with the existing QUIC Initial generator and SNI `www.cloudflare.com`, with fresh randomness per generation. This is not MASQUE. Like the reference AWG2 export, this format omits Reserved (the embedded AWG schema does not support it). Standard WG mode preserves Reserved. This difference is disclosed in the generation UI and needs a real registered handshake on the target network; no compatibility guarantee is made. Do not arbitrarily enable RandomTrailers or change WireGuard header numbers against a standard Cloudflare peer.
 
 A UDP send, TCP connect or ICMP response does not prove a working WARP tunnel. No live account/registered handshake was created during these tests.
+
+
+## WEB wizard and client exports
+The WARP wizard reuses Proton's settings/config steps, accordions, chips and result actions. The endpoint is a select, with a separate custom-host field shown only for “Custom endpoint”. Custom IPv4, IPv6 and DNS hosts are configuration data only, never registration targets. Ports remain protocol-specific.
+
+AmneziaWG and Mihomo AWG offer **WARP #1** (reference fixed QUIC packet), **WARP #2** (fresh local QUIC Initial), **WARP #3** (reference SIP I1/I2). Public packet presets come from https://warp-generation.github.io/script.js, snapshot 2026-11-11; they contain no credentials. WireSock uses Id/Ip/Ib; Xray uses a WireGuard outbound plus freedom noises; standard WireGuard omits unsupported AWG/Reserved directives.
+
+Clash/Mihomo MASQUE is not a WireGuard conversion: generate ECDSA P-256 locally, POST a temporary X25519 public key then PATCH the fixed Cloudflare registration with the P-256 SPKI public key. The browser alone builds SEC1 DER private-key output. The mirror's fixed `/warp/reg` handles this only when `masque_key` is present; it never accepts upstream URLs or caller-supplied registration tokens. Account tokens are discarded after enrollment, not returned or exported. Direct mode performs both calls directly without mirror fallback. Flow reference: https://github.com/6Kmfi6HP/warp-reg-gw/tree/main/internal/registration. Existing deployments need an updated mirror for MASQUE support.
+
+Exports are covered by structural/cryptographic tests. Actual handshakes and third-party client imports are not verified. AWG-capable Mihomo and Xray noise support depend on client/core versions. No endpoint is represented as universally reachable. No live registrations are created by the tests.
+
+Browser regression checks (against a running site and a headless Chromium-compatible browser with CDP enabled): `BASE_URL=http://127.0.0.1:4174/ CDP_URL=http://127.0.0.1:9226 node scripts/qa-warp-wizard.mjs`. Checks 390/1440px layouts, both selects, conditional custom input, three profile names, settings persistence, generation/result actions and MASQUE port separation. Registration is mocked; no live keys are registered. Optional `QA_SCREENSHOT=/tmp/warp-settings.png` captures settings before generation, never a private-key result.

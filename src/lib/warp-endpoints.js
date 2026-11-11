@@ -7,16 +7,33 @@ export const WARP_ENDPOINTS = [...new Set([
  ...Array.from({ length: 256 }, (_, n) => `162.159.193.${n}`),
  ...WARP_COMMUNITY_PREFIXES.flatMap(prefix => Array.from({ length: 10 }, (_, n) => prefix + (n + 1))),
 ])]
-export function validateWarpOptions({ endpoint = "", port = null } = {}) {
- if (endpoint && !WARP_ENDPOINTS.includes(endpoint)) throw new RangeError("Unknown WARP endpoint")
+/** Custom hosts are configuration data only: never used as a registration URL. */
+export function normalizeWarpHost(value) {
+ if (typeof value !== "string" || value.length > 253 || value !== value.trim() || /[\s/@?#\\]/.test(value)) throw new RangeError("Invalid endpoint")
+ if (!value) return ""
+ if (value.includes(":")) {
+  const bracketed = value.startsWith("[") ? value : `[${value}]`
+  try {
+   const url = new URL("https:" + "//" + bracketed + "/")
+   if (url.port || !url.hostname.startsWith("[")) throw new Error()
+   return url.hostname
+  } catch { throw new RangeError("Invalid IPv6 endpoint") }
+ }
+ if (/^[0-9.]+$/.test(value)) {
+  if (!/^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/.test(value) || value.split(".").some(n => Number(n) > 255 || (n.length > 1 && n.startsWith("0")))) throw new RangeError("Invalid IPv4 endpoint")
+ } else if (!/^(?=.{1,253}$)(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)*[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$/.test(value)) throw new RangeError("Invalid endpoint hostname")
+ return value.toLowerCase()
+}
+export function validateWarpOptions({ endpoint = "", port = null, customEndpoint = false } = {}) {
+ if (endpoint && (customEndpoint ? !normalizeWarpHost(endpoint) : !WARP_ENDPOINTS.includes(endpoint))) throw new RangeError("Unknown WARP endpoint")
  if (port != null && !WARP_PORTS.includes(port)) throw new RangeError("Unknown WARP UDP port")
 }
-export async function applyWarpOptions(text, { endpoint = "", port = null, awg2 = false } = {}) {
- validateWarpOptions({ endpoint, port })
+export async function applyWarpOptions(text, { endpoint = "", port = null, awg2 = false, customEndpoint = false } = {}) {
+ validateWarpOptions({ endpoint, port, customEndpoint })
  const old = text.match(/^Endpoint = (.+)$/m)?.[1]
  if (!old) throw new Error("Missing endpoint")
  const split = old.lastIndexOf(":")
- text = text.replace(/^Endpoint = .+$/m, `Endpoint = ${endpoint || old.slice(0, split)}:${port || old.slice(split + 1)}`)
+ text = text.replace(/^Endpoint = .+$/m, `Endpoint = ${(endpoint && normalizeWarpHost(endpoint)) || old.slice(0, split)}:${port || old.slice(split + 1)}`)
  if (awg2) {
   // The referenced generator's WARP-compatible AWG2 format uses standard WG headers,
   // no Reserved directive, and only initiator-side junk/QUIC masking. Not MASQUE.

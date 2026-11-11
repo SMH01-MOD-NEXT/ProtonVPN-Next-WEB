@@ -1,38 +1,111 @@
 import { t, onLanguageChange } from "../i18n/index.js"
-import { element, button } from "./generator-view.js"
-import { generateWarp } from "../lib/warp.js"
-import { WARP_ENDPOINTS, WARP_PORTS, WARP_OFFICIAL_PORTS } from "../lib/warp-endpoints.js"
+import { element, button, labelledField, stepBar, accordion, notices, toggleRow } from "./generator-view.js"
+import { generateWarpClient, WARP_FORMATS, warpFormat } from "../lib/warp-formats.js"
+import { WARP_ENDPOINTS, WARP_PORTS, WARP_OFFICIAL_PORTS, validateWarpOptions } from "../lib/warp-endpoints.js"
+import { MASQUE_ENDPOINTS, MASQUE_PORTS } from "../lib/warp-masque.js"
+import { downloadConfig } from "../lib/conf.js"
+
+const STEPS = [{ id: "settings", labelKey: "gen_step_settings" }, { id: "config", labelKey: "gen_step_config" }]
+
+/** Same settings accordions, chips, step bar and result card as the Proton wizard. */
 export function mountWarp(root) {
- let busy = false
- const title = element("h3", "text-xl font-bold"), note = element("p", "mt-3 text-slate-400")
- const check = element("input", "mr-3"); check.type = "checkbox"; check.checked = true
- const label = element("label", "mt-6 flex items-center"); const labelText = element("span"); label.append(check, labelText)
- const endpointLabel = element("label", "field-label mt-4"), endpointText = element("span")
- const endpoint = element("input", "field mt-2 w-full"); endpoint.setAttribute("list", "warp-endpoint-candidates"); endpoint.autocomplete = "off"
- const candidates = element("datalist"); candidates.id = "warp-endpoint-candidates"
- WARP_ENDPOINTS.forEach(ip => { const option = element("option"); option.value = ip; candidates.append(option) })
- endpointLabel.append(endpointText, endpoint)
- const portLabel = element("label", "field-label mt-4"), portText = element("span"), port = element("select", "field mt-2 w-full")
- for (const n of [...WARP_OFFICIAL_PORTS, ...WARP_PORTS.filter(n => !WARP_OFFICIAL_PORTS.includes(n))]) {
-  const option = element("option"); option.value = String(n); option.textContent = String(n); port.append(option)
+ const state = { step: "settings", format: "amneziawg", variant: 2, endpoint: "", customHost: "", port: 2408, bypass: true, busy: false, errorKey: null, config: "", copied: false, open: { network: true, format: false, registration: false } }
+ root.classList.remove("card", "p-6")
+ const isMasque = () => state.format === "clash-masque"
+ function select(id, values, value, change) {
+  const control = element("select", "field")
+  control.id = id
+  for (const [key, label] of values) { const option = element("option", "", label); option.value = String(key); control.append(option) }
+  control.value = String(value)
+  control.disabled = state.busy
+  control.addEventListener("change", () => change(control.value))
+  return control
  }
- portLabel.append(portText, port)
- const awg = element("input", "mr-3"); awg.type = "checkbox"
- const awgLabel = element("label", "mt-4 flex items-center"), awgText = element("span"); awgLabel.append(awg, awgText)
- const warning = element("p", "mt-3 text-sm text-slate-400")
- const output = element("textarea", "field field-mono mt-6 w-full"); output.readOnly = true; output.rows = 12; output.hidden = true
- const status = element("p", "mt-4 text-slate-400"); status.setAttribute("role", "status")
- const action = button("btn-primary mt-6", "", async () => {
-  if (busy) return
-  busy = true; action.disabled = true; output.value = ""; output.hidden = true; status.textContent = t("warp_busy")
-  try { output.value = await generateWarp({ bypass: check.checked, endpoint: endpoint.value.trim(), port: Number(port.value), awg2: awg.checked }); output.hidden = false; status.textContent = t("warp_ready") }
-  catch { status.textContent = t(check.checked ? "warp_error" : "warp_direct_error") }
-  finally { busy = false; action.disabled = false; download.hidden = !output.value }
- })
- const download = button("btn-ghost mt-4", "", () => {
-  const url = URL.createObjectURL(new Blob([output.value], { type: "text/plain" }))
-  const a = element("a"); a.href = url; a.download = "warp.conf"; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000)
- }); download.hidden = true
- function translate() { title.textContent = t("warp_title"); note.textContent = t("warp_note"); labelText.textContent = t("warp_bypass"); action.textContent = t("warp_generate"); download.textContent = t("warp_download"); output.setAttribute("aria-label", t("warp_title")); endpointText.textContent = t("warp_endpoint"); endpoint.placeholder = t("warp_api_endpoint"); portText.textContent = t("warp_port"); awgText.textContent = t("warp_awg2"); warning.textContent = t("warp_candidates_notice") }
- root.append(title, note, endpointLabel, candidates, portLabel, awgLabel, warning, label, action, status, output, download); translate(); onLanguageChange(translate)
+ function network() {
+  const panel = element("div", "space-y-5")
+  const endpoints = isMasque() ? MASQUE_ENDPOINTS : WARP_ENDPOINTS
+  const endpoint = select("warp-endpoint", [["", t("warp_api_endpoint")], ...endpoints.map(ip => [ip, ip]), ["custom", t("warp_custom_endpoint")]], state.endpoint, value => { state.endpoint = value; render() })
+  panel.append(labelledField("warp_endpoint", endpoint))
+  if (state.endpoint === "custom") {
+   const input = element("input", "field field-mono")
+   input.id = "warp-custom-endpoint"; input.type = "text"; input.value = state.customHost; input.autocomplete = "off"; input.spellcheck = false; input.maxLength = 253; input.disabled = state.busy
+   input.placeholder = t("warp_custom_placeholder")
+   input.addEventListener("input", () => { state.customHost = input.value })
+   panel.append(labelledField("warp_custom_endpoint", input), element("p", "text-xs text-slate-500", t("warp_custom_hint")))
+  }
+  const ports = isMasque() ? MASQUE_PORTS : [...WARP_OFFICIAL_PORTS, ...WARP_PORTS.filter(p => !WARP_OFFICIAL_PORTS.includes(p))]
+  panel.append(labelledField("warp_port", select("warp-port", ports.map(p => [p, String(p)]), state.port, value => { state.port = Number(value) })))
+  panel.append(element("p", "text-xs text-slate-500", t(isMasque() ? "warp_masque_notice" : "warp_candidates_notice")))
+  return panel
+ }
+ function formats() {
+  const panel = element("div", "space-y-4"), chips = element("div", "flex flex-wrap gap-2")
+  for (const format of WARP_FORMATS) {
+   const active = state.format === format.id
+   chips.append(button(`chip ${active ? "chip-active" : ""}`, t(format.labelKey), () => {
+    const previousMasque = isMasque(); state.format = format.id
+    if (previousMasque !== isMasque()) { state.endpoint = ""; state.port = isMasque() ? 443 : 2408 }
+    render()
+   }, { pressed: active, disabled: state.busy }))
+  }
+  panel.append(chips, element("p", "text-xs text-slate-500", t(`warp_desc_${state.format}`)))
+  if (["amneziawg", "clash"].includes(state.format)) {
+   const profiles = element("div", "flex flex-wrap gap-2")
+   for (const variant of [1,2,3]) profiles.append(button(`chip ${state.variant === variant ? "chip-active" : ""}`, t(`warp_variant_${variant}`), () => { state.variant = variant; render() }, { pressed: state.variant === variant, disabled: state.busy }))
+   panel.append(element("span", "field-label", t("warp_variant")), profiles, element("p", "text-xs text-slate-500", t(`warp_variant_${state.variant}_desc`)))
+  }
+  return panel
+ }
+ async function generate() {
+  if (state.busy) return
+  const customEndpoint = state.endpoint === "custom"
+  const endpoint = customEndpoint ? state.customHost.trim() : state.endpoint
+  try {
+   if (customEndpoint && !endpoint) throw new RangeError()
+   // Reject invalid custom data before creating keys or contacting any registration API.
+   validateWarpOptions({ endpoint, customEndpoint, port: isMasque() ? null : state.port })
+  } catch { state.errorKey = "warp_invalid_endpoint"; render(); return }
+  const options = { format: state.format, variant: state.variant, endpoint, customEndpoint, port: state.port, bypass: state.bypass }
+  state.busy = true; state.errorKey = null; state.config = ""; render()
+  try { state.config = await generateWarpClient(options); state.step = "config"; state.copied = false }
+  catch { state.errorKey = state.bypass ? "warp_error" : "warp_direct_error" }
+  finally { state.busy = false; render() }
+ }
+ function settings() {
+  const wrapper = element("div", "space-y-4")
+  for (const [id, titleKey, content, summaryText] of [
+   ["network", "gen_network_title", network(), state.endpoint === "custom" ? t("warp_custom_endpoint") : (state.endpoint || t("warp_api_endpoint"))],
+   ["format", "gen_format_title", formats(), t(warpFormat(state.format).labelKey)],
+   ["registration", "warp_registration_title", toggleRow("warp_bypass", "warp_bypass_desc", state.bypass, value => { state.bypass = value }), ""],
+  ]) wrapper.append(accordion({ titleKey, summaryText, open: state.open[id], onToggle: open => { state.open[id] = open }, children: [content] }))
+  // Freeze all settings while a registration is in flight, including the shared toggle.
+  wrapper.querySelectorAll("input").forEach(input => { input.disabled = state.busy })
+  const footer = element("div")
+  footer.append(button("btn-primary", t(state.busy ? "warp_busy" : "warp_generate"), generate, { disabled: state.busy }), notices(state))
+  const status = element("p", "sr-only", state.busy ? t("warp_busy") : ""); status.setAttribute("role", "status"); footer.append(status)
+  wrapper.append(footer)
+  return wrapper
+ }
+ function result() {
+  const card = element("div", "card")
+  card.append(element("h3", "text-sm font-semibold text-white", t("gen_result_title")), element("p", "mt-1 text-xs text-slate-500", t(warpFormat(state.format).labelKey)))
+  const code = element("pre", "code-block mt-4"); code.append(element("code", "", state.config)); card.append(code)
+  const actions = element("div", "mt-5 flex flex-wrap gap-3")
+  actions.append(
+   button("btn-primary", t("warp_download"), () => downloadConfig(state.config, `warp-${state.format}.${warpFormat(state.format).extension}`)),
+   button("btn-ghost", t(state.copied ? "gen_copied" : "gen_copy"), async () => {
+    try { await navigator.clipboard.writeText(state.config); state.copied = true; state.errorKey = null }
+    catch { state.errorKey = "warp_copy_error" }
+    render()
+   }),
+   button("btn-ghost", t("gen_another"), () => { state.step = "settings"; state.errorKey = null; render() }),
+  )
+  card.append(actions, notices(state)); return card
+ }
+ function render() {
+  const section = element("div", "container-page")
+  section.append(element("h2", "section-title", t("warp_title")), element("p", "section-subtitle", t("warp_note")), stepBar(STEPS, state.step), state.step === "config" ? result() : settings())
+  root.replaceChildren(section)
+ }
+ render(); onLanguageChange(render)
 }
