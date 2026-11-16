@@ -1,6 +1,6 @@
 {
 	"version": 2,
-	"updatedAt": "2026-08-17T22:46:00Z",
+	"updatedAt": "2026-11-16T12:10:19Z",
 	"events": [
 		{
 			"id": "vercel",
@@ -8,6 +8,13 @@
 			"url": "https://proton-vpn-next-web.vercel.app/api/",
 			"enabled": true,
 			"expiresAt": ""
+		},
+		{
+			"id": "deno",
+			"name": "Deno",
+			"url": "https://protonvpn-next-web--main.smh01-mirrors.deno.net/api/",
+			"enabled": true,
+			"expiresAt": "01-04-2027"
 		}
 	]
 }

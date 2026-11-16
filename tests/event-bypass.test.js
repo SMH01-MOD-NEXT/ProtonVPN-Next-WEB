@@ -84,3 +84,14 @@ test("an enabled bypass points at an https endpoint ending with a slash", () => 
 		)
 	}
 })
+
+test("Deno is published as an Event bypass until 1 April 2027", () => {
+	const deno = config.events.find((event) => event.id === "deno")
+	assert.deepEqual(deno, {
+		id: "deno",
+		name: "Deno",
+		url: "https://protonvpn-next-web--main.smh01-mirrors.deno.net/api/",
+		enabled: true,
+		expiresAt: "01-04-2027",
+	})
+})
