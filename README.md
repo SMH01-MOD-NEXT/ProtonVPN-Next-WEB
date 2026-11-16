@@ -51,7 +51,7 @@ built `dist/` and answers `/api` itself.
 **Cloudflare Workers** — `worker/index.ts` as the entry, `dist/` as the asset directory. Deploys run
 through Workers Builds with build command `npm run build` and deploy command `npx wrangler deploy`;
 a manual `npm run deploy` from a checkout does the same thing. The deployment owns the custom domain
-`home.protonnext.qzz.io`, so its proxy answers `https://home.protonnext.qzz.io/api/...` directly.
+`home.smh01.net.eu.org`, so its proxy answers `https://home.smh01.net.eu.org/api/...` directly.
 
 **Vercel** — builds on push; the functions in `api/` answer `/api`. A `vercel.json` rewrite maps
 `/api/*` onto the same function, and the function recovers the original path from the platform's
@@ -75,7 +75,7 @@ other when its own route to Proton cannot be used.
 | `PVPN_QUOTA_SECRET` | environment variable / `wrangler secret put` | Signs the quota cookie and hashes caller addresses. Optional but recommended; without it a built-in fallback is used. |
 | `QUOTA` | Cloudflare KV binding, see `wrangler.jsonc` | Quota storage. Without it the Cache API is used, which is per-colo rather than global. Deno Deploy uses Deno KV automatically. |
 | `PVPN_RELAY_SECRET` | environment variable on Vercel, Cloudflare and Deno (same value everywhere) | Signs the caller address the Vercel function relays to the sibling proxies, so relayed visitors keep their own quotas instead of sharing one bucket. Without it the relay fallback stays off. |
-| `PVPN_RELAY_CF_URL`, `PVPN_RELAY_DENO_URL` | environment variables on Vercel | Optional overrides for the relay targets. The defaults are `https://home.protonnext.qzz.io/api` and the Deno deployment. |
+| `PVPN_RELAY_CF_URL`, `PVPN_RELAY_DENO_URL` | environment variables on Vercel | Optional overrides for the relay targets. The defaults are `https://protonvpn-next-web.smh01.workers.dev/api` and the Deno deployment. |
 
 ## Rate limits
 

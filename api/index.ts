@@ -22,7 +22,7 @@ const DEFAULT_UPSTREAM = "https://vpn-api.proton.me"
  * target from the request would turn this function into an open proxy.
  */
 const RELAYS: Record<string, string> = {
-  cf: process.env.PVPN_RELAY_CF_URL || "https://home.protonnext.qzz.io/api",
+  cf: process.env.PVPN_RELAY_CF_URL || "https://protonvpn-next-web.smh01.workers.dev/api",
   deno: process.env.PVPN_RELAY_DENO_URL || "https://protonvpn-next-web--main.smh01-mirrors.deno.net/api",
 }
 

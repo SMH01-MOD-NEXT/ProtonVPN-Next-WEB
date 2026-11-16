@@ -57,6 +57,12 @@ function deploymentOrder(chain) {
 	return order
 }
 
+test("Cloudflare IP checks use the current site domain", () => {
+	const cloudflare = resolverChain().filter((source) => source.id === "cloudflare")
+	assert.ok(cloudflare.length > 0)
+	assert.ok(cloudflare.every((source) => new URL(source.url).hostname === "home.smh01.net.eu.org"))
+})
+
 test("the visitor's own origin is asked before anyone else", () => {
 	// The whole point of running an echo is that the address does not have to
 	// leave the deployment the visitor already loaded the page from.

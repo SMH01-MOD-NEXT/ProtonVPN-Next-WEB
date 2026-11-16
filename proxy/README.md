@@ -66,8 +66,7 @@ quota just to spell the URL without the `/api` prefix.
 | Host | URL | Used by |
 | --- | --- | --- |
 | Deno Deploy | `https://protonvpn-next-web--main.smh01-mirrors.deno.net/api` | website, Android, CLI |
-| Cloudflare | `<worker-url>/api` | website only, when Deno is unreachable |
-| Netlify | `https://shimmering-stroopwafel-51675e.netlify.app` | Android and CLI only |
+| Cloudflare | `https://protonvpn-next-web.smh01.workers.dev/api` | website, Android, WARP bootstrap |
 | Northflank | `<service>--<project>--<team>.code.run/api` | spare host, metered |
 | Wasmer Edge | `https://<project>.wasmer.app/api` | source-built Node mirror and native clients |
 | alwaysdata | `https://<account>.alwaysdata.net/api` | source-built Node mirror and native clients |
@@ -84,12 +83,10 @@ Proton throttles Cloudflare egress harder than the alternatives, so that path
 hits human verification sooner. It exists so the two hosts do not depend on
 each other, not as an equal route: keep Deno primary.
 
-Netlify is kept for the native clients, where it is a working bypass for users
-in Iran. It is deliberately not used by the website: Netlify is unreachable from
-Russia, and the GitHub account it is linked to has been banned, so the live
-deployment is frozen on a build that predates CORS support and answers browser
-requests without `Access-Control-Allow-Origin`. Native clients do not enforce
-CORS, so that stale build keeps working for them.
+The former Netlify deployment has been removed and is no longer an active
+proxy. Its deployment template remains for reference. The website domain is
+`home.smh01.net.eu.org`; automated clients use the Cloudflare Worker endpoint
+where a browser challenge on the website domain would block API traffic.
 
 ## Changing the proxy URL
 
@@ -97,7 +94,7 @@ Every consumer hardcodes it:
 
 - `src/lib/api.js` (`API_ENDPOINTS`)
 - `app/src/main/java/ru/protonmod/next/di/NetworkModule.kt`
-  (`PROTON_PROXY_DENO_URL`, `PROTON_PROXY_NETLIFY_URL`)
+  (`PROTON_PROXY_DENO_URL`, `PROTON_PROXY_CLOUDFLARE_URL`)
 - `app/src/main/java/ru/protonmod/next/data/network/TokenAuthenticator.kt`
 - `app/src/main/java/ru/protonmod/next/data/network/DohFallbackInterceptor.kt`
 - `app/src/main/java/ru/protonmod/next/ui/screens/CaptchaScreen.kt`

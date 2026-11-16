@@ -34,7 +34,7 @@
 const REQUEST_TIMEOUT_MS = 6000
 
 /** Where the site's own copies of the proxy live. */
-const CLOUDFLARE_BASE = "https://home.protonnext.qzz.io"
+const CLOUDFLARE_BASE = "https://home.smh01.net.eu.org"
 const DENO_BASE = "https://protonvpn-next-web--main.smh01-mirrors.deno.net"
 const VERCEL_BASE = "https://proton-vpn-next-web.vercel.app"
 
