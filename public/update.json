@@ -1,31 +1,31 @@
 {
   "nightly": {
     "debug": {
-      "versionCode": 605160395,
-      "versionName": "12.0.0-alpha3-8-g68ade0d-nightly",
+      "versionCode": 605160403,
+      "versionName": "12.0.0-alpha3-16-g4bd76d1-nightly",
       "url": "https://r2.protonnext.qzz.io/VPN-Next-TEST/app-nightly-standard-debug.apk",
-      "changelog": "fix(vpn): start WARP proxy chains without requiring IPv6",
+      "changelog": "Checkpoint Task workspace changes\n\nEigent-Operation: gitop_2bb4d9bdb7b60bf8c2429817cfa4d80d\nEigent-Actor: Agents.single_agent\nEigent-Trigger: terminal.execute\nEigent-Initiator: Agent\nEigent-Run-ID: 1795112980867-1985\nEigent-Task-ID: 1795112980867-1985\nEigent-Task-Status: checkpointed",
       "force": false
     },
     "release": {
-      "versionCode": 605160395,
-      "versionName": "12.0.0-alpha3-8-g68ade0d-nightly",
+      "versionCode": 605160403,
+      "versionName": "12.0.0-alpha3-16-g4bd76d1-nightly",
       "url": "https://r2.protonnext.qzz.io/VPN-Next-TEST/app-nightly-standard-release.apk",
-      "changelog": "fix(vpn): start WARP proxy chains without requiring IPv6",
+      "changelog": "Checkpoint Task workspace changes\n\nEigent-Operation: gitop_2bb4d9bdb7b60bf8c2429817cfa4d80d\nEigent-Actor: Agents.single_agent\nEigent-Trigger: terminal.execute\nEigent-Initiator: Agent\nEigent-Run-ID: 1795112980867-1985\nEigent-Task-ID: 1795112980867-1985\nEigent-Task-Status: checkpointed",
       "force": false
     },
     "privacyDebug": {
-      "versionCode": 605160395,
-      "versionName": "12.0.0-alpha3-8-g68ade0d-nightly",
+      "versionCode": 605160403,
+      "versionName": "12.0.0-alpha3-16-g4bd76d1-nightly",
       "url": "https://r2.protonnext.qzz.io/VPN-Next-TEST/app-nightly-privacy-debug.apk",
-      "changelog": "fix(vpn): start WARP proxy chains without requiring IPv6",
+      "changelog": "Checkpoint Task workspace changes\n\nEigent-Operation: gitop_2bb4d9bdb7b60bf8c2429817cfa4d80d\nEigent-Actor: Agents.single_agent\nEigent-Trigger: terminal.execute\nEigent-Initiator: Agent\nEigent-Run-ID: 1795112980867-1985\nEigent-Task-ID: 1795112980867-1985\nEigent-Task-Status: checkpointed",
       "force": false
     },
     "privacyRelease": {
-      "versionCode": 605160395,
-      "versionName": "12.0.0-alpha3-8-g68ade0d-nightly",
+      "versionCode": 605160403,
+      "versionName": "12.0.0-alpha3-16-g4bd76d1-nightly",
       "url": "https://r2.protonnext.qzz.io/VPN-Next-TEST/app-nightly-privacy-release.apk",
-      "changelog": "fix(vpn): start WARP proxy chains without requiring IPv6",
+      "changelog": "Checkpoint Task workspace changes\n\nEigent-Operation: gitop_2bb4d9bdb7b60bf8c2429817cfa4d80d\nEigent-Actor: Agents.single_agent\nEigent-Trigger: terminal.execute\nEigent-Initiator: Agent\nEigent-Run-ID: 1795112980867-1985\nEigent-Task-ID: 1795112980867-1985\nEigent-Task-Status: checkpointed",
       "force": false
     }
   },
